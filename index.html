@@ -1,0 +1,1905 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>서부본부 VD등급 현황 대시보드</title>
+<!-- PWA Meta Tags -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="VD등급">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#1a3a5c">
+<meta name="application-name" content="서부VD등급">
+<link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect width='192' height='192' rx='32' fill='%231a3a5c'/><text x='96' y='130' text-anchor='middle' font-size='100' fill='white'>📊</text></svg>">
+<link rel="manifest" href="data:application/json;base64,eyJuYW1lIjoi7ISc67aA67O467aAIFZE65Ox6riJIO2YhO2ZqSIsInNob3J0X25hbWUiOiJWROuTsea4iSIsInN0YXJ0X3VybCI6Ii4vIiwiZGlzcGxheSI6InN0YW5kYWxvbmUiLCJiYWNrZ3JvdW5kX2NvbG9yIjoiIzFhM2E1YyIsInRoZW1lX2NvbG9yIjoiIzFhM2E1YyIsImljb25zIjpbeyJzcmMiOiJkYXRhOmltYWdlL3N2Zyt4bWwsPHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCAxOTIgMTkyJz48cmVjdCB3aWR0aD0nMTkyJyBoZWlnaHQ9JzE5Micgcng9JzMyJyBmaWxsPSclMjMxYTNhNWMnLz48dGV4dCB4PSc5NicgeT0nMTMwJyB0ZXh0LWFuY2hvcj0nbWlkZGxlJyBmb250LXNpemU9JzEwMCcgZmlsbD0nd2hpdGUnPvCfk4o8L3RleHQ+PC9zdmc+Iiwic2l6ZXMiOiIxOTJ4MTkyIiwidHlwZSI6ImltYWdlL3N2Zyt4bWwifV19"  >
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #f0f2f5;
+  --card: #ffffff;
+  --primary: #1a3a5c;
+  --primary-light: #2a5a8c;
+  --accent: #e8513d;
+  --accent-light: #ff6b57;
+  --success: #10b981;
+  --warning: #f59e0b;
+  --danger: #ef4444;
+  --text: #1e293b;
+  --text-secondary: #64748b;
+  --border: #e2e8f0;
+  --grade-s: #dc2626;
+  --grade-a: #ea580c;
+  --grade-b: #2563eb;
+  --grade-c: #16a34a;
+  --grade-d: #6b7280;
+  --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06);
+  --shadow-lg: 0 4px 12px rgba(0,0,0,0.1);
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:'Noto Sans KR',sans-serif; background:var(--bg); color:var(--text); font-size:13px; line-height:1.5; }
+.hidden { display:none !important; }
+
+/* Login Screen */
+#loginScreen {
+  min-height:100vh; display:flex; align-items:center; justify-content:center;
+  background: linear-gradient(135deg, #1a3a5c 0%, #2a5a8c 50%, #3b7ab8 100%);
+  position:relative; overflow:hidden;
+}
+#loginScreen::before {
+  content:''; position:absolute; top:-50%; left:-50%; width:200%; height:200%;
+  background: radial-gradient(ellipse at 30% 50%, rgba(255,255,255,0.05) 0%, transparent 50%),
+              radial-gradient(ellipse at 70% 20%, rgba(255,255,255,0.03) 0%, transparent 40%);
+  animation: loginBgMove 20s ease-in-out infinite alternate;
+}
+@keyframes loginBgMove { from{transform:translateX(-5%) translateY(-5%)} to{transform:translateX(5%) translateY(5%)} }
+.login-box {
+  background:rgba(255,255,255,0.95); backdrop-filter:blur(20px);
+  border-radius:16px; padding:48px 40px; width:420px; position:relative; z-index:1;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+}
+.login-box h1 { font-size:22px; font-weight:700; color:var(--primary); margin-bottom:6px; text-align:center; }
+.login-box .subtitle { color:var(--text-secondary); text-align:center; margin-bottom:32px; font-size:13px; }
+.login-tabs { display:flex; gap:8px; margin-bottom:24px; }
+.login-tab {
+  flex:1; padding:10px; text-align:center; border-radius:8px; cursor:pointer;
+  font-weight:600; font-size:13px; transition:all .2s;
+  border:2px solid var(--border); color:var(--text-secondary);
+}
+.login-tab.active { border-color:var(--primary); background:var(--primary); color:#fff; }
+.login-tab:hover:not(.active) { border-color:var(--primary-light); color:var(--primary); }
+.login-input-group { margin-bottom:20px; }
+.login-input-group label { display:block; font-weight:600; margin-bottom:6px; font-size:12px; color:var(--text-secondary); }
+.login-input-group input {
+  width:100%; padding:12px 16px; border:2px solid var(--border); border-radius:8px;
+  font-size:18px; letter-spacing:8px; text-align:center; font-family:inherit;
+  transition:border-color .2s;
+}
+.login-input-group input:focus { outline:none; border-color:var(--primary); }
+.login-btn {
+  width:100%; padding:14px; border:none; border-radius:8px; font-size:15px;
+  font-weight:700; cursor:pointer; transition:all .2s; font-family:inherit;
+}
+.login-btn.admin { background:var(--primary); color:#fff; }
+.login-btn.admin:hover { background:var(--primary-light); }
+.login-btn.user { background:var(--accent); color:#fff; }
+.login-btn.user:hover { background:var(--accent-light); }
+.login-error { color:var(--danger); text-align:center; margin-top:12px; font-size:12px; font-weight:500; min-height:18px; }
+
+/* Main Layout */
+#mainApp { display:none; }
+.top-bar {
+  background:var(--primary); color:#fff; padding:0 24px; height:52px;
+  display:flex; align-items:center; justify-content:space-between;
+  position:sticky; top:0; z-index:100; box-shadow:0 2px 8px rgba(0,0,0,0.15);
+}
+.top-bar-left { display:flex; align-items:center; gap:16px; }
+.top-bar-left h1 { font-size:16px; font-weight:700; letter-spacing:-0.3px; }
+.top-bar-left .date-badge {
+  background:rgba(255,255,255,0.15); padding:4px 12px; border-radius:12px;
+  font-size:11px; font-weight:500;
+}
+.top-bar-right { display:flex; align-items:center; gap:12px; }
+.top-bar-right .role-badge {
+  background:rgba(255,255,255,0.2); padding:4px 10px; border-radius:10px;
+  font-size:11px; font-weight:600;
+}
+.top-bar-btn {
+  padding:6px 14px; border:1px solid rgba(255,255,255,0.3); border-radius:6px;
+  background:transparent; color:#fff; font-size:12px; cursor:pointer;
+  font-family:inherit; font-weight:500; transition:all .2s;
+}
+.top-bar-btn:hover { background:rgba(255,255,255,0.15); }
+.top-bar-btn.publish { background:var(--accent); border-color:var(--accent); font-weight:700; }
+.top-bar-btn.publish:hover { background:var(--accent-light); }
+
+/* Stats bar */
+.stats-bar {
+  background:#fff; border-bottom:1px solid var(--border); padding:12px 24px;
+  display:flex; align-items:center; gap:24px;
+}
+.stat-item { display:flex; align-items:center; gap:8px; }
+.stat-item .stat-icon { width:32px; height:32px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:14px; }
+.stat-item .stat-info .stat-label { font-size:10px; color:var(--text-secondary); font-weight:500; }
+.stat-item .stat-info .stat-value { font-size:16px; font-weight:700; }
+
+/* Team Summary Cards */
+.team-summary-section { padding:16px 24px; display:flex; gap:12px; flex-wrap:wrap; }
+.team-card {
+  flex:1; min-width:220px; background:#fff; border-radius:10px; padding:16px;
+  box-shadow:var(--shadow); border-left:4px solid var(--primary);
+}
+.team-card h3 { font-size:14px; font-weight:700; margin-bottom:10px; color:var(--primary); }
+.team-card .grade-row { display:flex; gap:4px; margin-bottom:8px; }
+.grade-pill {
+  flex:1; text-align:center; padding:4px 2px; border-radius:4px; font-size:11px; font-weight:700; color:#fff;
+}
+.grade-pill.s { background:var(--grade-s); }
+.grade-pill.a { background:var(--grade-a); }
+.grade-pill.b { background:var(--grade-b); }
+.grade-pill.c { background:var(--grade-c); }
+.grade-pill.d { background:var(--grade-d); }
+.team-card .team-fee { font-size:12px; color:var(--text-secondary); margin-top:4px; }
+.team-card .team-fee strong { color:var(--text); }
+.team-card .team-ratio { font-size:11px; color:var(--primary); font-weight:600; margin-top:2px; }
+
+/* Filters */
+.filter-section {
+  background:#fff; border-bottom:1px solid var(--border); padding:12px 24px;
+}
+.filter-row { display:flex; gap:12px; flex-wrap:wrap; align-items:flex-start; }
+.filter-group { position:relative; }
+.filter-group label { display:block; font-size:10px; font-weight:600; color:var(--text-secondary); margin-bottom:4px; }
+.filter-select-btn {
+  padding:6px 12px; border:1px solid var(--border); border-radius:6px;
+  background:#fff; cursor:pointer; font-size:12px; font-family:inherit;
+  display:flex; align-items:center; gap:6px; min-width:140px; justify-content:space-between;
+}
+.filter-select-btn:hover { border-color:var(--primary); }
+.filter-dropdown {
+  position:absolute; top:100%; left:0; background:#fff; border:1px solid var(--border);
+  border-radius:8px; box-shadow:var(--shadow-lg); z-index:50; min-width:200px;
+  max-height:280px; overflow-y:auto; display:none; margin-top:4px;
+}
+.filter-dropdown.open { display:block; }
+.filter-dropdown-header { padding:8px 12px; border-bottom:1px solid var(--border); display:flex; gap:8px; }
+.filter-dropdown-header button {
+  padding:3px 8px; border:1px solid var(--border); border-radius:4px;
+  background:#fff; cursor:pointer; font-size:11px; font-family:inherit;
+}
+.filter-dropdown-header button:hover { background:var(--bg); }
+.filter-dropdown-item {
+  padding:6px 12px; cursor:pointer; display:flex; align-items:center; gap:8px;
+  font-size:12px; transition:background .1s;
+}
+.filter-dropdown-item:hover { background:var(--bg); }
+.filter-dropdown-item input { accent-color:var(--primary); }
+.filter-applied {
+  padding:8px 24px; background:#f8fafc; border-bottom:1px solid var(--border);
+  font-size:11px; color:var(--text-secondary); display:flex; align-items:center; gap:8px; flex-wrap:wrap;
+}
+.filter-tag {
+  background:var(--primary); color:#fff; padding:2px 8px; border-radius:10px;
+  font-size:10px; font-weight:500; display:inline-flex; align-items:center; gap:4px;
+}
+.filter-tag .remove { cursor:pointer; opacity:0.7; }
+.filter-tag .remove:hover { opacity:1; }
+
+/* Main Tabs */
+.main-tabs {
+  background:#fff; border-bottom:2px solid var(--border); padding:0 24px;
+  display:flex; overflow-x:auto;
+}
+.main-tab {
+  padding:12px 20px; font-size:13px; font-weight:600; cursor:pointer;
+  border-bottom:3px solid transparent; white-space:nowrap; transition:all .2s;
+  color:var(--text-secondary);
+}
+.main-tab:hover { color:var(--text); }
+.main-tab.active { color:var(--primary); border-bottom-color:var(--primary); }
+
+/* Content */
+.content-area { padding:20px 24px; }
+.card { background:#fff; border-radius:10px; box-shadow:var(--shadow); padding:20px; margin-bottom:16px; }
+.card-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
+.card-header h3 { font-size:15px; font-weight:700; color:var(--primary); }
+.pdf-btn {
+  padding:6px 14px; background:var(--accent); color:#fff; border:none; border-radius:6px;
+  font-size:11px; font-weight:600; cursor:pointer; font-family:inherit;
+}
+.pdf-btn:hover { background:var(--accent-light); }
+
+/* Tables */
+.data-table { width:100%; border-collapse:collapse; font-size:12px; }
+.data-table th {
+  background:var(--primary); color:#fff; padding:8px 10px; text-align:center;
+  font-weight:600; font-size:11px; white-space:nowrap; position:sticky; top:0;
+}
+.data-table td {
+  padding:6px 10px; border-bottom:1px solid var(--border); text-align:center;
+  white-space:nowrap;
+}
+.data-table tr:hover td { background:#f8fafc; }
+.data-table .grade-cell { font-weight:700; border-radius:4px; padding:2px 8px; }
+
+/* Grade badges */
+.grade-badge {
+  display:inline-block; padding:2px 10px; border-radius:10px; font-weight:700;
+  font-size:11px; color:#fff;
+}
+.grade-badge.S { background:var(--grade-s); }
+.grade-badge.A { background:var(--grade-a); }
+.grade-badge.B { background:var(--grade-b); }
+.grade-badge.C { background:var(--grade-c); }
+.grade-badge.D { background:var(--grade-d); }
+
+.change-badge { font-size:11px; font-weight:700; }
+.change-badge.up { color:var(--success); }
+.change-badge.down { color:var(--danger); }
+.change-badge.same { color:var(--text-secondary); }
+
+/* Charts */
+.chart-container { position:relative; height:280px; }
+.chart-row { display:flex; gap:16px; flex-wrap:wrap; }
+.chart-col { flex:1; min-width:300px; }
+
+/* Sub tabs */
+.sub-tabs { display:flex; gap:4px; margin-bottom:16px; }
+.sub-tab {
+  padding:8px 16px; background:var(--bg); border-radius:6px; cursor:pointer;
+  font-size:12px; font-weight:600; color:var(--text-secondary); transition:all .2s;
+}
+.sub-tab.active { background:var(--primary); color:#fff; }
+
+/* Modal */
+.modal-overlay {
+  position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.5);
+  z-index:200; display:flex; align-items:center; justify-content:center;
+}
+.modal {
+  background:#fff; border-radius:12px; padding:24px; max-width:800px; width:95%;
+  max-height:85vh; overflow-y:auto; box-shadow:0 20px 60px rgba(0,0,0,0.3);
+}
+.modal h2 { font-size:18px; margin-bottom:16px; color:var(--primary); }
+.modal-close {
+  float:right; background:none; border:none; font-size:20px; cursor:pointer;
+  color:var(--text-secondary); padding:4px 8px;
+}
+.modal-close:hover { color:var(--text); }
+
+/* Admin Panel */
+.admin-panel { background:#fffbf0; border:1px solid #fde68a; border-radius:10px; padding:16px; margin-bottom:16px; }
+.admin-panel h3 { color:#92400e; font-size:14px; margin-bottom:12px; }
+.upload-zone {
+  border:2px dashed var(--border); border-radius:10px; padding:40px 20px;
+  text-align:center; cursor:pointer; transition:all .2s; background:#fafafa;
+}
+.upload-zone:hover, .upload-zone.dragover { border-color:var(--primary); background:#f0f7ff; }
+.upload-zone p { color:var(--text-secondary); margin-top:8px; font-size:13px; }
+.upload-zone .icon { font-size:36px; }
+
+/* Pagination */
+.pagination { display:flex; align-items:center; justify-content:center; gap:4px; margin-top:16px; }
+.page-btn {
+  padding:6px 12px; border:1px solid var(--border); border-radius:6px;
+  background:#fff; cursor:pointer; font-size:12px; font-family:inherit;
+}
+.page-btn:hover { background:var(--bg); }
+.page-btn.active { background:var(--primary); color:#fff; border-color:var(--primary); }
+
+/* Notice */
+.notice-form textarea { width:100%; min-height:120px; padding:12px; border:1px solid var(--border); border-radius:8px; font-family:inherit; font-size:13px; resize:vertical; }
+.notice-form input[type="text"] { width:100%; padding:10px 12px; border:1px solid var(--border); border-radius:8px; font-family:inherit; font-size:13px; margin-bottom:8px; }
+.notice-item { border:1px solid var(--border); border-radius:8px; padding:16px; margin-bottom:10px; }
+.notice-item h4 { font-size:14px; font-weight:700; margin-bottom:6px; }
+.notice-item .notice-meta { font-size:11px; color:var(--text-secondary); margin-bottom:8px; }
+.notice-item .notice-body { font-size:13px; line-height:1.7; }
+.notice-item .notice-files { margin-top:8px; }
+.notice-item .notice-files a { color:var(--primary); font-size:12px; text-decoration:underline; }
+
+/* Weakness bar */
+.weakness-bar-bg { width:100%; height:8px; background:#e5e7eb; border-radius:4px; overflow:hidden; }
+.weakness-bar-fill { height:100%; border-radius:4px; transition:width .5s; }
+
+/* Scrollbar */
+::-webkit-scrollbar { width:6px; height:6px; }
+::-webkit-scrollbar-track { background:transparent; }
+::-webkit-scrollbar-thumb { background:#cbd5e1; border-radius:3px; }
+::-webkit-scrollbar-thumb:hover { background:#94a3b8; }
+
+/* Print */
+@media print {
+  .top-bar, .filter-section, .filter-applied, .main-tabs, .no-print { display:none !important; }
+  .card { box-shadow:none; border:1px solid #ddd; page-break-inside:avoid; }
+}
+
+/* Responsive */
+@media (max-width:768px) {
+  .team-summary-section { flex-direction:column; }
+  .chart-row { flex-direction:column; }
+  .filter-row { flex-direction:column; }
+}
+
+/* Loading */
+.loading-overlay {
+  position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(255,255,255,0.9);
+  z-index:300; display:flex; flex-direction:column; align-items:center; justify-content:center;
+}
+.spinner { width:40px; height:40px; border:4px solid var(--border); border-top-color:var(--primary); border-radius:50%; animation:spin .8s linear infinite; }
+@keyframes spin { to{transform:rotate(360deg)} }
+
+/* Improvement suggestion */
+.improve-card {
+  background:linear-gradient(135deg, #eff6ff 0%, #f0fdf4 100%);
+  border:1px solid #bfdbfe; border-radius:8px; padding:12px; margin-bottom:8px;
+}
+.improve-card .improve-title { font-weight:700; font-size:13px; color:var(--primary); margin-bottom:4px; }
+.improve-card .improve-detail { font-size:12px; color:var(--text-secondary); }
+.improve-card .improve-score { font-size:14px; font-weight:700; color:var(--accent); }
+
+/* Boundary stores */
+.boundary-badge {
+  display:inline-block; padding:3px 10px; border-radius:12px; font-size:11px;
+  font-weight:700; background:#fef3c7; color:#92400e; border:1px solid #fde68a;
+}
+</style>
+</head>
+<body>
+
+<!-- Login Screen -->
+<div id="loginScreen">
+  <div class="login-box">
+    <h1>📊 서부본부 VD등급 현황</h1>
+    <p class="subtitle">소매매장 VD등급 분석 대시보드</p>
+    <div class="login-tabs">
+      <div class="login-tab active" onclick="setLoginMode('user')">👤 사용자</div>
+      <div class="login-tab" onclick="setLoginMode('admin')">🔧 관리자</div>
+    </div>
+    <div class="login-input-group">
+      <label id="pwLabel">사용자 비밀번호 (숫자 4자리)</label>
+      <input type="password" id="pwInput" maxlength="4" pattern="[0-9]*" inputmode="numeric" placeholder="●●●●" autocomplete="off">
+    </div>
+    <button class="login-btn user" id="loginBtn" onclick="attemptLogin()">사용자 접속</button>
+    <div class="login-error" id="loginError"></div>
+  </div>
+</div>
+
+<!-- Loading -->
+<div id="loadingOverlay" class="loading-overlay hidden">
+  <div class="spinner"></div>
+  <p style="margin-top:16px;font-weight:600;color:var(--primary)">데이터를 분석하고 있습니다...</p>
+</div>
+
+<!-- Main App -->
+<div id="mainApp">
+  <!-- Top Bar -->
+  <div class="top-bar">
+    <div class="top-bar-left">
+      <h1>📊 서부본부 VD등급 현황</h1>
+      <span class="date-badge" id="dateBadge">기준일: -</span>
+    </div>
+    <div class="top-bar-right">
+      <span class="role-badge" id="roleBadge">사용자</span>
+      <button class="top-bar-btn publish" id="publishBtn" onclick="publishToFirebase()" style="display:none">🚀 온라인 배포</button>
+      <button class="top-bar-btn" onclick="logout()">로그아웃</button>
+    </div>
+  </div>
+
+  <!-- Stats Bar -->
+  <div class="stats-bar" id="statsBar">
+    <div class="stat-item">
+      <div class="stat-icon" style="background:#eff6ff;color:var(--primary)">📅</div>
+      <div class="stat-info">
+        <div class="stat-label">오늘 조회수</div>
+        <div class="stat-value" id="todayViews">0</div>
+      </div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-icon" style="background:#f0fdf4;color:var(--success)">📈</div>
+      <div class="stat-info">
+        <div class="stat-label">월 누적 조회수</div>
+        <div class="stat-value" id="monthViews">0</div>
+      </div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-icon" style="background:#fef3c7;color:#d97706">🏪</div>
+      <div class="stat-info">
+        <div class="stat-label">평가대상 매장수</div>
+        <div class="stat-value" id="totalStores">0</div>
+      </div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-icon" style="background:#fce7f3;color:#db2777">💰</div>
+      <div class="stat-info">
+        <div class="stat-label">예상 수수료 합계</div>
+        <div class="stat-value" id="totalFee">0</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Team Summary -->
+  <div class="team-summary-section" id="teamSummary"></div>
+
+  <!-- Filters -->
+  <div class="filter-section">
+    <div class="filter-row">
+      <div class="filter-group">
+        <label>팀명</label>
+        <div class="filter-select-btn" onclick="toggleDropdown('teamFilter')">
+          <span id="teamFilterLabel">전체</span> <span>▼</span>
+        </div>
+        <div class="filter-dropdown" id="teamFilter"></div>
+      </div>
+      <div class="filter-group">
+        <label>대리점명</label>
+        <div class="filter-select-btn" onclick="toggleDropdown('agencyFilter')">
+          <span id="agencyFilterLabel">전체</span> <span>▼</span>
+        </div>
+        <div class="filter-dropdown" id="agencyFilter"></div>
+      </div>
+      <div class="filter-group">
+        <label>매장명</label>
+        <div class="filter-select-btn" onclick="toggleDropdown('storeFilter')">
+          <span id="storeFilterLabel">전체</span> <span>▼</span>
+        </div>
+        <div class="filter-dropdown" id="storeFilter"></div>
+      </div>
+      <div class="filter-group">
+        <label>현 분기 등급</label>
+        <div class="filter-select-btn" onclick="toggleDropdown('gradeFilter')">
+          <span id="gradeFilterLabel">전체</span> <span>▼</span>
+        </div>
+        <div class="filter-dropdown" id="gradeFilter"></div>
+      </div>
+    </div>
+  </div>
+  <div class="filter-applied" id="filterApplied">
+    <span>적용 필터:</span> <span id="filterTags">없음</span>
+  </div>
+
+  <!-- Main Tabs -->
+  <div class="main-tabs">
+    <div class="main-tab active" data-tab="team" onclick="switchTab('team')">📊 팀별</div>
+    <div class="main-tab" data-tab="agency" onclick="switchTab('agency')">🏢 대리점별</div>
+    <div class="main-tab" data-tab="store" onclick="switchTab('store')">🏪 매장별</div>
+    <div class="main-tab" data-tab="rawlist" onclick="switchTab('rawlist')">📋 상세리스트</div>
+    <div class="main-tab" data-tab="notice" onclick="switchTab('notice')">📢 공지사항</div>
+    <div class="main-tab" data-tab="usage" onclick="switchTab('usage')" id="usageTab">📈 활용현황</div>
+  </div>
+
+  <!-- Tab Content -->
+  <div class="content-area" id="contentArea">
+    <div id="tabTeam"></div>
+    <div id="tabAgency" class="hidden"></div>
+    <div id="tabStore" class="hidden"></div>
+    <div id="tabRawlist" class="hidden"></div>
+    <div id="tabNotice"></div>
+    <div id="tabUsage" class="hidden"></div>
+  </div>
+
+  <!-- Admin Upload Panel (shown at top for admin) -->
+  <div id="adminUploadPanel" class="hidden" style="padding:16px 24px;">
+    <div class="admin-panel">
+      <h3>🔧 관리자 패널</h3>
+      <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:12px;margin-bottom:12px;font-size:12px;color:#1e40af;line-height:1.7">
+        <strong>📋 매일 업데이트 절차 (GitHub Pages 재배포 불필요!):</strong><br>
+        ① 아래에서 VD평가 엑셀파일 업로드 → ② 데이터 확인 → ③ 상단 <strong>"🚀 온라인 배포"</strong> 클릭 → ④ 완료!<br>
+        <span style="color:#059669">Firebase Firestore를 통해 사용자들이 즉시 최신 데이터를 확인할 수 있습니다.</span>
+      </div>
+      <div style="display:flex;gap:16px;flex-wrap:wrap;">
+        <div style="flex:1;min-width:300px;">
+          <div class="upload-zone" id="uploadZone">
+            <div class="icon">📁</div>
+            <p><strong>VD평가 엑셀파일 업로드</strong></p>
+            <p>파일을 드래그하거나 클릭하여 선택</p>
+            <input type="file" id="fileInput" accept=".xlsx,.xls" style="display:none">
+          </div>
+          <p id="uploadStatus" style="margin-top:8px;font-size:12px;color:var(--text-secondary);text-align:center;"></p>
+        </div>
+        <div style="flex:0 0 220px;">
+          <div style="margin-bottom:12px;background:#fff;border:1px solid #fde68a;border-radius:8px;padding:10px;">
+            <label style="font-size:12px;font-weight:700;display:block;margin-bottom:4px;color:#e65100;">🔥 Firebase 연동 설정 (최초 1회)</label>
+            <textarea id="firebaseConfigInput" placeholder='Firebase 콘솔 → 프로젝트 설정 → 내 앱 에서 복사한 config 붙여넣기&#10;&#10;const firebaseConfig = {&#10;  apiKey: "...",&#10;  authDomain: "...",&#10;  projectId: "...",&#10;  ...&#10;};' style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-size:10px;height:115px;font-family:monospace;resize:vertical;"></textarea>
+            <button onclick="saveFirebaseConfigUI()" style="margin-top:4px;padding:7px 12px;background:#e65100;color:#fff;border:none;border-radius:6px;cursor:pointer;width:100%;font-size:12px;font-family:inherit;font-weight:700;">🔥 Firebase 연결하기</button>
+            <p id="firebaseStatus" style="font-size:10px;color:var(--text-secondary);margin-top:4px;text-align:center;"></p>
+          </div>
+          <div style="margin-bottom:8px;">
+            <label style="font-size:11px;font-weight:600;display:block;margin-bottom:3px;">사용자 비밀번호</label>
+            <div style="display:flex;gap:4px">
+              <input type="text" id="newUserPw" maxlength="4" pattern="[0-9]*" placeholder="4자리" style="padding:6px;border:1px solid var(--border);border-radius:6px;flex:1;font-size:13px;letter-spacing:3px;text-align:center;">
+              <button onclick="changeUserPw()" style="padding:6px 10px;background:var(--primary);color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:11px;font-family:inherit;white-space:nowrap;">변경</button>
+            </div>
+          </div>
+          <div>
+            <label style="font-size:11px;font-weight:600;display:block;margin-bottom:3px;">관리자 비밀번호</label>
+            <div style="display:flex;gap:4px">
+              <input type="text" id="newAdminPw" maxlength="4" pattern="[0-9]*" placeholder="4자리" style="padding:6px;border:1px solid var(--border);border-radius:6px;flex:1;font-size:13px;letter-spacing:3px;text-align:center;">
+              <button onclick="changeAdminPw()" style="padding:6px 10px;background:var(--accent);color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:11px;font-family:inherit;white-space:nowrap;">변경</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Container -->
+<div id="modalContainer"></div>
+
+<script>
+// ===== FIREBASE CONFIG =====
+let db = null;
+
+function getFirebaseConfig() {
+  try {
+    const saved = localStorage.getItem('vd_firebase_config');
+    return saved ? JSON.parse(saved) : null;
+  } catch(e) { return null; }
+}
+
+function hasFirebaseConfig() {
+  const cfg = getFirebaseConfig();
+  return !!(cfg && cfg.apiKey && cfg.projectId);
+}
+
+function initFirebase() {
+  const config = getFirebaseConfig();
+  if (!config || !config.apiKey) return false;
+  try {
+    if (!firebase.apps.length) firebase.initializeApp(config);
+    db = firebase.firestore();
+    return true;
+  } catch(e) { console.error('Firebase init error:', e); return false; }
+}
+
+// 페이지 로드 시 자동 초기화
+(function() {
+  const config = getFirebaseConfig();
+  if (config && config.apiKey) {
+    try {
+      if (!firebase.apps.length) firebase.initializeApp(config);
+      db = firebase.firestore();
+      console.log('Firebase 자동 초기화 성공:', config.projectId);
+    } catch(e) { console.warn('Firebase 자동 초기화 실패:', e.message); }
+  }
+})();
+
+// ===== STATE =====
+const STATE = {
+  role: null, // 'admin' | 'user'
+  loginMode: 'user',
+  rawData: null, // parsed store data array
+  agencyData: null,
+  publishedData: null, // data visible to users
+  publishedAgencyData: null,
+  filters: { team:[], agency:[], store:[], grade:[] },
+  currentTab: 'team',
+  notices: [],
+  viewLog: [], // {team,agency,store,date}
+  chartInstances: {},
+  rawPage: 1,
+  baseDate: '',
+};
+
+// Passwords stored in localStorage
+function getPw(key) { return localStorage.getItem('vd_'+key) || (key==='admin'?'0000':'1234'); }
+function setPw(key, val) { localStorage.setItem('vd_'+key, val); }
+
+// ===== STORAGE HELPERS =====
+function saveToStorage(key, data) {
+  try { localStorage.setItem('vd_store_'+key, JSON.stringify(data)); } catch(e) { console.warn('Storage full'); }
+}
+function loadFromStorage(key) {
+  try { const d=localStorage.getItem('vd_store_'+key); return d?JSON.parse(d):null; } catch(e) { return null; }
+}
+
+// ===== LOGIN =====
+function setLoginMode(mode) {
+  STATE.loginMode = mode;
+  document.querySelectorAll('.login-tab').forEach((t,i)=> t.classList.toggle('active', (mode==='user'?i===0:i===1)));
+  document.getElementById('pwLabel').textContent = mode==='admin'?'관리자 비밀번호 (숫자 4자리)':'사용자 비밀번호 (숫자 4자리)';
+  const btn = document.getElementById('loginBtn');
+  btn.textContent = mode==='admin'?'관리자 접속':'사용자 접속';
+  btn.className = 'login-btn '+ mode;
+  document.getElementById('loginError').textContent='';
+}
+
+function attemptLogin() {
+  const pw = document.getElementById('pwInput').value;
+  const correctPw = getPw(STATE.loginMode);
+  if (pw === correctPw) {
+    STATE.role = STATE.loginMode;
+    document.getElementById('loginScreen').style.display='none';
+    document.getElementById('mainApp').style.display='block';
+    document.getElementById('roleBadge').textContent = STATE.role==='admin'?'🔧 관리자':'👤 사용자';
+    if (STATE.role==='admin') {
+      document.getElementById('adminUploadPanel').classList.remove('hidden');
+      document.getElementById('publishBtn').style.display='';
+      document.getElementById('usageTab').style.display='';
+    } else {
+      document.getElementById('adminUploadPanel').classList.add('hidden');
+      document.getElementById('publishBtn').style.display='none';
+      document.getElementById('usageTab').style.display='none';
+    }
+    initApp();
+  } else {
+    document.getElementById('loginError').textContent='비밀번호가 올바르지 않습니다.';
+  }
+}
+
+function logout() {
+  STATE.role=null;
+  document.getElementById('mainApp').style.display='none';
+  document.getElementById('loginScreen').style.display='flex';
+  document.getElementById('pwInput').value='';
+  setLoginMode('user');
+}
+
+document.getElementById('pwInput').addEventListener('keydown', e=>{ if(e.key==='Enter') attemptLogin(); });
+
+// ===== PASSWORD CHANGE =====
+function changeUserPw() {
+  const v=document.getElementById('newUserPw').value;
+  if(v.length===4 && /^\d{4}$/.test(v)) { setPw('user',v); alert('사용자 비밀번호가 변경되었습니다.\n"🚀 온라인 배포" 시 반영됩니다.'); }
+  else alert('숫자 4자리를 입력해주세요.');
+}
+function changeAdminPw() {
+  const v=document.getElementById('newAdminPw').value;
+  if(v.length===4 && /^\d{4}$/.test(v)) { setPw('admin',v); alert('관리자 비밀번호가 변경되었습니다.\n"🚀 온라인 배포" 시 반영됩니다.'); }
+  else alert('숫자 4자리를 입력해주세요.');
+}
+
+// ===== FIREBASE CONFIG UI =====
+function saveFirebaseConfigUI() {
+  const raw = document.getElementById('firebaseConfigInput').value.trim();
+  if (!raw) { alert('Firebase 설정을 붙여넣어 주세요.'); return; }
+  try {
+    // firebaseConfig 객체 또는 JSON 모두 파싱 지원
+    let jsonStr = raw;
+    // "const firebaseConfig = {...}" 형태 처리
+    const objMatch = raw.match(/=\s*(\{[\s\S]*?\})/);
+    if (objMatch) jsonStr = objMatch[1];
+    // JSON 형식으로 변환 (key: "val" → "key": "val")
+    jsonStr = jsonStr.replace(/([{,]\s*)([a-zA-Z_][a-zA-Z0-9_]*)\s*:/g, '$1"$2":');
+    const config = JSON.parse(jsonStr);
+    if (!config.apiKey || !config.projectId) throw new Error('apiKey 또는 projectId가 없습니다.');
+    localStorage.setItem('vd_firebase_config', JSON.stringify(config));
+    if (initFirebase()) {
+      document.getElementById('firebaseStatus').textContent = '✅ Firebase 연결 성공! 프로젝트: ' + config.projectId;
+      document.getElementById('firebaseStatus').style.color = '#059669';
+      alert('✅ Firebase 연결 성공!\n프로젝트: ' + config.projectId + '\n\n이제 엑셀을 업로드하고 "🚀 온라인 배포"를 클릭하세요!');
+    } else {
+      throw new Error('Firebase 초기화에 실패했습니다.');
+    }
+  } catch(e) {
+    document.getElementById('firebaseStatus').textContent = '❌ 오류: ' + e.message;
+    document.getElementById('firebaseStatus').style.color = '#dc2626';
+    alert('오류: ' + e.message + '\n\nFirebase 콘솔에서 config를 다시 복사해 붙여넣어 주세요.');
+  }
+}
+
+function loadFirebaseConfigToUI() {
+  const config = getFirebaseConfig();
+  const input = document.getElementById('firebaseConfigInput');
+  const status = document.getElementById('firebaseStatus');
+  if (config && input) {
+    input.value = JSON.stringify(config, null, 2);
+  }
+  if (status) {
+    if (db) {
+      status.textContent = '✅ Firebase 연결됨: ' + (config?.projectId || '');
+      status.style.color = '#059669';
+    } else {
+      status.textContent = '⚠️ Firebase 미연결 - 아래 config를 붙여넣고 연결하세요';
+      status.style.color = '#d97706';
+    }
+  }
+}
+
+// ===== INIT =====
+async function initApp() {
+  STATE.notices = loadFromStorage('notices') || [];
+  STATE.viewLog = loadFromStorage('viewLog') || [];
+
+  const hasFB = hasFirebaseConfig();
+
+  if (STATE.role==='admin') {
+    loadFirebaseConfigToUI();
+    const sd = loadFromStorage('adminData');
+    const sa = loadFromStorage('adminAgencyData');
+    if (sd) { STATE.rawData = sd; STATE.agencyData = sa; STATE.baseDate = loadFromStorage('baseDate')||''; renderAll(); }
+    if (hasFB) { await loadFromFirebase(); }
+    if (!hasFB) { showFirebaseSetupGuide(); }
+  } else {
+    if (hasFB) {
+      await loadFromFirebase();
+    } else {
+      document.getElementById('contentArea').innerHTML='<div class="card"><p style="text-align:center;padding:40px;color:var(--text-secondary);">관리자가 아직 데이터를 배포하지 않았습니다.<br><br>관리자에게 문의하세요.</p></div>';
+    }
+  }
+  setupUpload();
+  updateViewCounts();
+}
+
+// ===== FIREBASE 함수들 =====
+async function loadFromFirebase() {
+  if (!db && !initFirebase()) {
+    if (STATE.role !== 'admin') {
+      document.getElementById('contentArea').innerHTML='<div class="card"><p style="text-align:center;padding:40px;color:var(--text-secondary);">Firebase 설정이 필요합니다.<br>관리자에게 문의하세요.</p></div>';
+    }
+    return;
+  }
+  try {
+    document.getElementById('loadingOverlay').classList.remove('hidden');
+    const doc = await db.collection('vd-dashboard').doc('main-data').get();
+    if (doc.exists) {
+      const data = doc.data();
+      if (data && data.rawData && data.rawData.length > 0) {
+        STATE.rawData = data.rawData;
+        STATE.agencyData = data.agencyData || [];
+        STATE.baseDate = data.baseDate || '';
+        STATE.notices = data.notices || [];
+        if (data.userPw) setPw('user', data.userPw);
+        if (data.adminPw) setPw('admin', data.adminPw);
+        renderAll();
+      } else {
+        if (STATE.role !== 'admin') document.getElementById('contentArea').innerHTML='<div class="card"><p style="text-align:center;padding:40px;color:var(--text-secondary);">관리자가 아직 데이터를 배포하지 않았습니다.</p></div>';
+      }
+    } else {
+      if (STATE.role !== 'admin') document.getElementById('contentArea').innerHTML='<div class="card"><p style="text-align:center;padding:40px;color:var(--text-secondary);">관리자가 아직 데이터를 배포하지 않았습니다.</p></div>';
+    }
+  } catch(e) {
+    console.error('Firebase load error:', e);
+    if (STATE.role !== 'admin') {
+      document.getElementById('contentArea').innerHTML='<div class="card"><p style="text-align:center;padding:40px;color:var(--text-secondary);">데이터를 불러올 수 없습니다.<br><small style="color:#94a3b8">'+e.message+'</small></p></div>';
+    }
+  } finally {
+    document.getElementById('loadingOverlay').classList.add('hidden');
+  }
+}
+
+async function publishToFirebase() {
+  if (!db && !initFirebase()) {
+    alert('Firebase 설정이 필요합니다.\n관리자 패널에서 Firebase 연동을 먼저 완료해주세요.');
+    return;
+  }
+  if (!STATE.rawData || !STATE.rawData.length) { alert('업로드된 데이터가 없습니다. 먼저 엑셀 파일을 업로드해주세요.'); return; }
+  if (!confirm('현재 데이터를 Firebase에 배포합니다.\n모든 사용자가 즉시 새 데이터를 확인할 수 있습니다.\n\n계속하시겠습니까?')) return;
+  try {
+    document.getElementById('loadingOverlay').classList.remove('hidden');
+    await db.collection('vd-dashboard').doc('main-data').set({
+      rawData: STATE.rawData, agencyData: STATE.agencyData || [],
+      baseDate: STATE.baseDate, notices: STATE.notices,
+      userPw: getPw('user'), adminPw: getPw('admin'),
+      publishDate: new Date().toISOString()
+    });
+    document.getElementById('loadingOverlay').classList.add('hidden');
+    alert('✅ Firebase 배포 완료!\n사용자들이 즉시 최신 데이터를 확인할 수 있습니다.');
+  } catch(e) {
+    document.getElementById('loadingOverlay').classList.add('hidden');
+    alert('배포 오류: ' + e.message);
+    console.error(e);
+  }
+}
+
+function showFirebaseSetupGuide() {
+  const guide = document.createElement('div');
+  guide.className = 'card';
+  guide.style.cssText = 'background:#fff8f0;border:2px solid #fed7aa';
+  guide.innerHTML = '<div class="card-header"><h3>🔥 Firebase config를 붙여넣어 연동을 완료하세요</h3></div>'
+    +'<div style="font-size:13px;line-height:2.2">'
+    +'<p>이미 <strong>seobu-vd</strong> Firebase 프로젝트가 있습니다! 아래 3단계만 따라하세요.</p>'
+    +'<p><strong>① Firebase 콘솔 탭 클릭</strong> → 왼쪽 상단 ⚙️ (프로젝트 설정) 클릭</p>'
+    +'<p><strong>② "내 앱" 섹션</strong>에서 웹앱(<code>&lt;/&gt;</code>) 선택 → <strong>"SDK 설정 및 구성"</strong>의 config 복사</p>'
+    +'<p><strong>③ 아래 관리자 패널</strong>의 Firebase 입력란에 붙여넣기 → <strong>"🔥 Firebase 연결하기"</strong> 클릭</p>'
+    +'<p style="color:#d97706">⚠️ Firestore Database가 없으면: 왼쪽 메뉴 <strong>빌드 → Firestore Database → 데이터베이스 만들기</strong> → 테스트 모드로 시작</p>'
+    +'</div>';
+  const cnt = document.getElementById('contentArea');
+  if (cnt) cnt.insertBefore(guide, cnt.firstChild);
+}
+
+
+// ===== FILE UPLOAD =====
+function setupUpload() {
+  const zone = document.getElementById('uploadZone');
+  const input = document.getElementById('fileInput');
+  if (!zone) return;
+  zone.addEventListener('click', ()=> input.click());
+  zone.addEventListener('dragover', e=>{ e.preventDefault(); zone.classList.add('dragover'); });
+  zone.addEventListener('dragleave', ()=> zone.classList.remove('dragover'));
+  zone.addEventListener('drop', e=>{ e.preventDefault(); zone.classList.remove('dragover'); if(e.dataTransfer.files[0]) processFile(e.dataTransfer.files[0]); });
+  input.addEventListener('change', e=>{ if(e.target.files[0]) processFile(e.target.files[0]); });
+}
+
+function processFile(file) {
+  if(!file.name.match(/\.xlsx?$/i)) { alert('엑셀(.xlsx) 파일만 업로드 가능합니다.'); return; }
+  document.getElementById('loadingOverlay').classList.remove('hidden');
+  document.getElementById('uploadStatus').textContent='파일 분석 중: '+file.name;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const wb = XLSX.read(e.target.result, {type:'array', cellDates:true});
+      parseWorkbook(wb);
+      document.getElementById('uploadStatus').textContent='✅ '+file.name+' 업로드 완료';
+    } catch(err) {
+      alert('파일 파싱 오류: '+err.message);
+      document.getElementById('uploadStatus').textContent='❌ 파일 처리 실패';
+    }
+    document.getElementById('loadingOverlay').classList.add('hidden');
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+// ===== PARSE WORKBOOK =====
+function parseWorkbook(wb) {
+  // Parse ●매장별 sheet
+  const wsName = wb.SheetNames.find(n=> n.includes('매장별') && n.includes('●'));
+  if (!wsName) { alert('"●매장별" 시트를 찾을 수 없습니다.'); return; }
+  const ws = wb.Sheets[wsName];
+  const range = XLSX.utils.decode_range(ws['!ref']);
+
+  // Column mapping from row 8
+  const headers = [];
+  for (let c=range.s.c; c<=range.e.c; c++) {
+    const cell = ws[XLSX.utils.encode_cell({r:7,c:c})];
+    headers[c] = cell ? String(cell.v||'').trim() : '';
+  }
+
+  // Max scores from row 6
+  const maxScores = {};
+  const scoreMapping = {37:'NPS종합', 41:'비판매성NPS', 43:'방문평가', 47:'교육_필수', 51:'유선레벨보유', 55:'기획과정이수', 56:'우수사례', 60:'IMC', 64:'서부기지개', 65:'팀정성평가', 69:'단골관리', 73:'추천유치율', 77:'T화면공유'};
+  const maxScoreVals = {37:30, 41:10, 43:20, 47:10, 51:2, 55:1.5, 56:0.5, 60:1, 64:1, 65:4, 69:8, 73:1, 77:1};
+
+  // Get base date
+  const dateCell = ws[XLSX.utils.encode_cell({r:1,c:7})];
+  STATE.baseDate = dateCell ? formatDateVal(dateCell.v) : '';
+
+  const stores = [];
+  for (let r=8; r<=range.e.r; r++) {
+    const getVal = (c)=> { const cell=ws[XLSX.utils.encode_cell({r:r,c:c})]; return cell?cell.v:null; };
+    const storeName = getVal(7);
+    if (!storeName) continue;
+
+    const store = {
+      searchKey: getVal(0)||'', seq: getVal(1)||'', region: getVal(2)||'', team: getVal(3)||'',
+      agencyCode: getVal(4)||'', agencyName: getVal(5)||'', storeCode: getVal(6)||'',
+      storeName: String(storeName), manager: getVal(8)||'',
+      sTarget: getVal(9)||'', prevGrade: getVal(10)||'',
+      prevScore: toNum(getVal(11)), prevRank: toNum(getVal(12)), prevFee: toNum(getVal(13)),
+      point: toNum(getVal(14)), workloadRank: toNum(getVal(15)),
+      currScore: toNum(getVal(16)), currRank: toNum(getVal(17)), rankRate: toNum(getVal(18)),
+      currGrade: getVal(19)||'', payRate: toNum(getVal(20)), expectedFee: toNum(getVal(21)),
+      feeChange: toNum(getVal(22)),
+      gradeChangeFrom: toNum(getVal(23)), gradeChangeTo: toNum(getVal(24)),
+      gradeGap: toNum(getVal(25)), gradeChangeDir: getVal(26)||'',
+      evalTarget: [toNum(getVal(27)), toNum(getVal(28)), toNum(getVal(29))],
+      workload: toNum(getVal(32)),
+      // Score items (using column index from row 6)
+      nps: toNum(getVal(36)), nps비판매: toNum(getVal(40)),
+      visit: toNum(getVal(42)), education: toNum(getVal(46)),
+      wirelessLevel: toNum(getVal(50)), planCourse: toNum(getVal(54)),
+      bestPractice: toNum(getVal(55)), imc: toNum(getVal(59)),
+      gigaegae: toNum(getVal(63)), teamEval: toNum(getVal(64)),
+      regularCustomer: toNum(getVal(68)), recommendRate: toNum(getVal(72)),
+      screenShare: toNum(getVal(76)),
+      customerInfo: toNum(getVal(77)), voc: toNum(getVal(78)),
+      // Monthly details
+      npsMonthly: [toNum(getVal(33)),toNum(getVal(34)),toNum(getVal(35))],
+      nps비판매Monthly: [toNum(getVal(37)),toNum(getVal(38)),toNum(getVal(39))],
+      eduMonthly: [toNum(getVal(43)),toNum(getVal(44)),toNum(getVal(45))],
+      wirelessMonthly: [toNum(getVal(47)),toNum(getVal(48)),toNum(getVal(49))],
+      planMonthly: [toNum(getVal(51)),toNum(getVal(52)),toNum(getVal(53))],
+      imcMonthly: [toNum(getVal(56)),toNum(getVal(57)),toNum(getVal(58))],
+      gigaegaeMonthly: [toNum(getVal(60)),toNum(getVal(61)),toNum(getVal(62))],
+      regularMonthly: [toNum(getVal(65)),toNum(getVal(66)),toNum(getVal(67))],
+      recommendMonthly: [toNum(getVal(69)),toNum(getVal(70)),toNum(getVal(71))],
+      screenShareMonthly: [toNum(getVal(73)),toNum(getVal(74)),toNum(getVal(75))],
+    };
+    stores.push(store);
+  }
+
+  // Parse ●대리점별 sheet
+  const agWsName = wb.SheetNames.find(n=> n.includes('대리점별') && n.includes('●'));
+  const agencies = [];
+  if (agWsName) {
+    const agWs = wb.Sheets[agWsName];
+    const agRange = XLSX.utils.decode_range(agWs['!ref']);
+    for (let r=13; r<=agRange.e.r; r++) {
+      const getVal=(c)=>{const cell=agWs[XLSX.utils.encode_cell({r:r,c:c})]; return cell?cell.v:null;};
+      const name = getVal(3);
+      if(!name) continue;
+      agencies.push({
+        region:getVal(0)||'', team:getVal(1)||'', code:getVal(2)||'', name:String(name),
+        manager:getVal(4)||'',
+        prevS:toNum(getVal(5)),prevA:toNum(getVal(6)),prevB:toNum(getVal(7)),prevC:toNum(getVal(8)),prevD:toNum(getVal(9)),prevE:toNum(getVal(10)),prevTotal:toNum(getVal(11)),prevFee:toNum(getVal(12)),
+        currS:toNum(getVal(13)),currA:toNum(getVal(14)),currB:toNum(getVal(15)),currC:toNum(getVal(16)),currD:toNum(getVal(17)),currE:toNum(getVal(18)),currTotal:toNum(getVal(19)),
+        sTarget:toNum(getVal(20)), currFee:toNum(getVal(21)), feeChange:toNum(getVal(22)),
+      });
+    }
+  }
+
+  STATE.rawData = stores;
+  STATE.agencyData = agencies;
+  saveToStorage('adminData', stores);
+  saveToStorage('adminAgencyData', agencies);
+  saveToStorage('baseDate', STATE.baseDate);
+  renderAll();
+}
+
+function toNum(v) { const n=parseFloat(v); return isNaN(n)?0:n; }
+function formatDateVal(v) {
+  if(v instanceof Date) return v.toISOString().slice(0,10);
+  if(typeof v==='string') return v.slice(0,10);
+  return String(v||'');
+}
+
+// ===== SCORING ITEMS =====
+const SCORE_ITEMS = [
+  {key:'nps', label:'NPS(종합)', max:30},
+  {key:'nps비판매', label:'비판매성NPS', max:10},
+  {key:'visit', label:'방문평가', max:20},
+  {key:'education', label:'교육_필수', max:10},
+  {key:'regularCustomer', label:'단골관리', max:8},
+  {key:'teamEval', label:'팀정성평가', max:4},
+  {key:'wirelessLevel', label:'유선레벨보유', max:2},
+  {key:'planCourse', label:'기획과정이수', max:1.5},
+  {key:'bestPractice', label:'우수사례', max:0.5},
+  {key:'imc', label:'IMC', max:1},
+  {key:'gigaegae', label:'서부기지개', max:1},
+  {key:'recommendRate', label:'추천유치율', max:1},
+  {key:'screenShare', label:'T화면공유', max:1},
+];
+const GRADE_BOUNDARIES = {S:16, A:65, B:98, C:164, D:328};
+const GRADE_COLORS = {S:'#dc2626',A:'#ea580c',B:'#2563eb',C:'#16a34a',D:'#6b7280'};
+const GRADE_ORDER = ['S','A','B','C','D'];
+
+// ===== FILTER LOGIC =====
+function getFilteredData() {
+  if(!STATE.rawData) return [];
+  let data = STATE.rawData;
+  const f = STATE.filters;
+  if(f.team.length) data=data.filter(d=>f.team.includes(d.team));
+  if(f.agency.length) data=data.filter(d=>f.agency.includes(d.agencyName));
+  if(f.store.length) data=data.filter(d=>f.store.includes(d.storeName));
+  if(f.grade.length) data=data.filter(d=>f.grade.includes(d.currGrade));
+  return data;
+}
+
+function getFilteredAgencyData() {
+  if(!STATE.agencyData) return [];
+  let data = STATE.agencyData;
+  const f = STATE.filters;
+  if(f.team.length) data=data.filter(d=>f.team.includes(d.team));
+  if(f.agency.length) data=data.filter(d=>f.agency.includes(d.name));
+  return data;
+}
+
+function buildFilters() {
+  if(!STATE.rawData) return;
+  const data = STATE.rawData;
+  const teams = [...new Set(data.map(d=>d.team))].sort();
+  const f = STATE.filters;
+
+  // Team filter
+  buildFilterDropdown('teamFilter','teamFilterLabel', teams, f.team, (sel)=>{ f.team=sel; cascadeFilters(); });
+
+  cascadeFilters();
+}
+
+function cascadeFilters() {
+  const data = STATE.rawData;
+  const f = STATE.filters;
+  let filtered = data;
+  if(f.team.length) filtered=filtered.filter(d=>f.team.includes(d.team));
+  const agencies = [...new Set(filtered.map(d=>d.agencyName))].sort();
+  buildFilterDropdown('agencyFilter','agencyFilterLabel', agencies, f.agency, (sel)=>{ f.agency=sel; cascadeStoreFilter(); });
+  cascadeStoreFilter();
+}
+
+function cascadeStoreFilter() {
+  const data = STATE.rawData;
+  const f = STATE.filters;
+  let filtered = data;
+  if(f.team.length) filtered=filtered.filter(d=>f.team.includes(d.team));
+  if(f.agency.length) filtered=filtered.filter(d=>f.agency.includes(d.agencyName));
+  const stores = [...new Set(filtered.map(d=>d.storeName))].sort();
+  buildFilterDropdown('storeFilter','storeFilterLabel', stores, f.store, (sel)=>{ f.store=sel; applyFilters(); });
+
+  const grades = [...new Set(data.map(d=>d.currGrade))].filter(Boolean).sort((a,b)=>GRADE_ORDER.indexOf(a)-GRADE_ORDER.indexOf(b));
+  buildFilterDropdown('gradeFilter','gradeFilterLabel', grades, f.grade, (sel)=>{ f.grade=sel; applyFilters(); });
+  applyFilters();
+}
+
+function buildFilterDropdown(containerId, labelId, options, selected, onChange) {
+  const container = document.getElementById(containerId);
+  let html = '<div class="filter-dropdown-header"><button onclick="filterSelectAll(\''+containerId+'\')">전체선택</button><button onclick="filterClearAll(\''+containerId+'\')">전체해제</button></div>';
+  options.forEach(opt => {
+    const checked = selected.includes(opt)?'checked':'';
+    html += `<div class="filter-dropdown-item"><input type="checkbox" ${checked} data-value="${opt}" onchange="filterItemChanged('${containerId}')"> ${opt}</div>`;
+  });
+  container.innerHTML = html;
+  container._onChange = onChange;
+  container._labelId = labelId;
+  updateFilterLabel(containerId);
+}
+
+function filterItemChanged(containerId) {
+  const container = document.getElementById(containerId);
+  const checks = container.querySelectorAll('input[type=checkbox]');
+  const sel = [...checks].filter(c=>c.checked).map(c=>c.dataset.value);
+  container._onChange(sel);
+  updateFilterLabel(containerId);
+}
+
+function filterSelectAll(containerId) {
+  const container = document.getElementById(containerId);
+  container.querySelectorAll('input[type=checkbox]').forEach(c=>c.checked=true);
+  filterItemChanged(containerId);
+}
+
+function filterClearAll(containerId) {
+  const container = document.getElementById(containerId);
+  container.querySelectorAll('input[type=checkbox]').forEach(c=>c.checked=false);
+  filterItemChanged(containerId);
+}
+
+function updateFilterLabel(containerId) {
+  const container = document.getElementById(containerId);
+  const checks = container.querySelectorAll('input[type=checkbox]');
+  const sel = [...checks].filter(c=>c.checked);
+  const label = document.getElementById(container._labelId);
+  if(sel.length===0 || sel.length===checks.length) label.textContent='전체';
+  else if(sel.length<=2) label.textContent=sel.map(c=>c.dataset.value).join(', ');
+  else label.textContent=sel[0].dataset.value+' 외 '+(sel.length-1)+'개';
+}
+
+function toggleDropdown(id) {
+  const el = document.getElementById(id);
+  document.querySelectorAll('.filter-dropdown').forEach(d=>{ if(d.id!==id) d.classList.remove('open'); });
+  el.classList.toggle('open');
+}
+
+document.addEventListener('click', e => {
+  if(!e.target.closest('.filter-group')) document.querySelectorAll('.filter-dropdown').forEach(d=>d.classList.remove('open'));
+});
+
+let applyDebounce;
+function applyFilters() {
+  clearTimeout(applyDebounce);
+  applyDebounce = setTimeout(()=>{
+    updateFilterTags();
+    recordView();
+    renderCurrentTab();
+    renderTeamSummary();
+    updateStats();
+  }, 150);
+}
+
+function updateFilterTags() {
+  const f = STATE.filters;
+  const tags = [];
+  f.team.forEach(t=> tags.push(`팀: ${t}`));
+  f.agency.forEach(t=> tags.push(`대리점: ${t}`));
+  f.store.forEach(t=> tags.push(`매장: ${t}`));
+  f.grade.forEach(t=> tags.push(`등급: ${t}`));
+  document.getElementById('filterTags').innerHTML = tags.length ? tags.map(t=>`<span class="filter-tag">${t}</span>`).join(' ') : '없음';
+}
+
+// ===== VIEW LOG =====
+function recordView() {
+  const f = STATE.filters;
+  const today = new Date().toISOString().slice(0,10);
+  if(f.team.length) f.team.forEach(t=> STATE.viewLog.push({type:'team',name:t,date:today}));
+  if(f.agency.length) f.agency.forEach(t=> STATE.viewLog.push({type:'agency',name:t,date:today}));
+  if(f.store.length) f.store.forEach(t=> STATE.viewLog.push({type:'store',name:t,date:today}));
+  if(!f.team.length && !f.agency.length && !f.store.length) STATE.viewLog.push({type:'all',name:'전체',date:today});
+  saveToStorage('viewLog', STATE.viewLog);
+  updateViewCounts();
+}
+
+function updateViewCounts() {
+  const today = new Date().toISOString().slice(0,10);
+  const month = today.slice(0,7);
+  const todayCount = STATE.viewLog.filter(v=>v.date===today).length;
+  const monthCount = STATE.viewLog.filter(v=>v.date.startsWith(month)).length;
+  document.getElementById('todayViews').textContent = todayCount.toLocaleString();
+  document.getElementById('monthViews').textContent = monthCount.toLocaleString();
+}
+
+// ===== RENDER ALL =====
+function renderAll() {
+  if(!STATE.rawData) return;
+  document.getElementById('dateBadge').textContent = '기준일: '+STATE.baseDate;
+  buildFilters();
+  renderTeamSummary();
+  updateStats();
+  renderCurrentTab();
+}
+
+function updateStats() {
+  const data = getFilteredData();
+  document.getElementById('totalStores').textContent = data.length.toLocaleString();
+  document.getElementById('totalFee').textContent = formatMoney(data.reduce((s,d)=>s+d.expectedFee,0));
+}
+
+function formatMoney(n) {
+  if(Math.abs(n)>=100000000) return (n/100000000).toFixed(1)+'억';
+  if(Math.abs(n)>=10000) return Math.round(n/10000).toLocaleString()+'만원';
+  return Math.round(n).toLocaleString()+'원';
+}
+function formatMoneyFull(n) { return Math.round(n).toLocaleString()+'원'; }
+
+// ===== TEAM SUMMARY =====
+function renderTeamSummary() {
+  const data = STATE.rawData;
+  if(!data) return;
+  const teams = [...new Set(data.map(d=>d.team))].sort();
+  const totalFee = data.reduce((s,d)=>s+d.expectedFee,0);
+  let html = '';
+  teams.forEach(team => {
+    const td = data.filter(d=>d.team===team);
+    const gc = {};
+    GRADE_ORDER.forEach(g=> gc[g]=td.filter(d=>d.currGrade===g).length);
+    const fee = td.reduce((s,d)=>s+d.expectedFee,0);
+    const ratio = totalFee>0?(fee/totalFee*100).toFixed(1)+'%':'0%';
+    const sbRatio = td.length>0?((gc.S+gc.A+gc.B)/td.length*100).toFixed(1):'0';
+    html += `<div class="team-card">
+      <h3>${team}팀 (${td.length}개 매장)</h3>
+      <div class="grade-row">
+        ${GRADE_ORDER.map(g=>`<div class="grade-pill ${g.toLowerCase()}"><div style="font-size:10px">${g}</div><div>${gc[g]}</div></div>`).join('')}
+      </div>
+      <div class="team-fee">예상수수료: <strong>${formatMoney(fee)}</strong> (점유 ${ratio})</div>
+      <div class="team-ratio">S~B비율: ${sbRatio}%</div>
+    </div>`;
+  });
+  document.getElementById('teamSummary').innerHTML = html;
+}
+
+// ===== TABS =====
+function switchTab(tab) {
+  STATE.currentTab = tab;
+  document.querySelectorAll('.main-tab').forEach(t=>t.classList.toggle('active', t.dataset.tab===tab));
+  ['tabTeam','tabAgency','tabStore','tabRawlist','tabNotice','tabUsage'].forEach(id=>{
+    document.getElementById(id).classList.add('hidden');
+  });
+  const tabMap = {team:'tabTeam',agency:'tabAgency',store:'tabStore',rawlist:'tabRawlist',notice:'tabNotice',usage:'tabUsage'};
+  document.getElementById(tabMap[tab]).classList.remove('hidden');
+  renderCurrentTab();
+}
+
+function renderCurrentTab() {
+  switch(STATE.currentTab) {
+    case 'team': renderTeamTab(); break;
+    case 'agency': renderAgencyTab(); break;
+    case 'store': renderStoreTab(); break;
+    case 'rawlist': renderRawListTab(); break;
+    case 'notice': renderNoticeTab(); break;
+    case 'usage': renderUsageTab(); break;
+  }
+}
+
+// ===== TEAM TAB =====
+function renderTeamTab() {
+  const data = getFilteredData();
+  if(!data.length) { document.getElementById('tabTeam').innerHTML='<div class="card"><p style="text-align:center;padding:20px;color:var(--text-secondary)">데이터가 없습니다.</p></div>'; return; }
+  const teams = [...new Set(data.map(d=>d.team))].sort();
+  let html = '';
+
+  // Grade change chart
+  html += `<div class="card"><div class="card-header"><h3>📊 팀별 등급 분포 및 전분기 대비 변화</h3><button class="pdf-btn" onclick="downloadPDF('tabTeam')">📄 PDF 다운로드</button></div>
+    <div class="chart-row"><div class="chart-col"><canvas id="teamGradeChart" height="280"></canvas></div>
+    <div class="chart-col"><canvas id="teamFeeChart" height="280"></canvas></div></div></div>`;
+
+  // Team weakness
+  html += `<div class="card"><div class="card-header"><h3>⚠️ 팀별 VD평가 취약 항목</h3></div><div id="teamWeakness"></div></div>`;
+
+  // Weak agencies & stores per team
+  teams.forEach(team => {
+    const td = data.filter(d=>d.team===team);
+    html += `<div class="card"><div class="card-header"><h3>📉 ${team}팀 - 전분기 대비 취약 대리점/매장</h3></div>
+      <div id="teamWeak_${team.replace(/\s/g,'')}"></div></div>`;
+  });
+
+  // Boundary stores
+  html += `<div class="card"><div class="card-header"><h3>🎯 등급 경계 매장 리스트</h3></div><div id="boundaryStores"></div></div>`;
+
+  document.getElementById('tabTeam').innerHTML = html;
+  setTimeout(()=>{
+    renderTeamGradeChart(data, teams);
+    renderTeamFeeChart(data, teams);
+    renderTeamWeakness(data, teams);
+    teams.forEach(team => renderTeamWeakDetail(data.filter(d=>d.team===team), team));
+    renderBoundaryStores(data);
+  }, 100);
+}
+
+function renderTeamGradeChart(data, teams) {
+  destroyChart('teamGradeChart');
+  const datasets = GRADE_ORDER.map(g => ({
+    label: g+'등급', data: teams.map(t=> data.filter(d=>d.team===t&&d.currGrade===g).length),
+    backgroundColor: GRADE_COLORS[g]+'cc',
+  }));
+  STATE.chartInstances.teamGradeChart = new Chart(document.getElementById('teamGradeChart'), {
+    type:'bar', data:{labels:teams.map(t=>t+'팀'), datasets},
+    options:{responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'top',labels:{font:{size:11}}},title:{display:true,text:'팀별 등급 분포 (현 분기)',font:{size:13}}},scales:{x:{stacked:true},y:{stacked:true,beginAtZero:true}}}
+  });
+}
+
+function renderTeamFeeChart(data, teams) {
+  destroyChart('teamFeeChart');
+  STATE.chartInstances.teamFeeChart = new Chart(document.getElementById('teamFeeChart'), {
+    type:'bar', data:{
+      labels:teams.map(t=>t+'팀'),
+      datasets:[
+        {label:'전분기 수수료', data:teams.map(t=>data.filter(d=>d.team===t).reduce((s,d)=>s+d.prevFee,0)/10000), backgroundColor:'#94a3b8'},
+        {label:'현분기 예상수수료', data:teams.map(t=>data.filter(d=>d.team===t).reduce((s,d)=>s+d.expectedFee,0)/10000), backgroundColor:'#3b82f6'},
+      ]
+    },
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top',labels:{font:{size:11}}},title:{display:true,text:'팀별 수수료 변화 (만원)',font:{size:13}}},scales:{y:{beginAtZero:true}}}
+  });
+}
+
+function renderTeamWeakness(data, teams) {
+  let html = '<div style="overflow-x:auto"><table class="data-table"><tr><th>팀명</th>';
+  SCORE_ITEMS.forEach(item=> html+=`<th>${item.label}<br><span style="font-weight:400;font-size:10px">(만점:${item.max})</span></th>`);
+  html += '</tr>';
+  const allAvg = {};
+  SCORE_ITEMS.forEach(item=> allAvg[item.key]=data.reduce((s,d)=>s+d[item.key],0)/Math.max(data.length,1));
+
+  teams.forEach(team => {
+    const td = data.filter(d=>d.team===team);
+    html += `<tr><td style="font-weight:700">${team}</td>`;
+    SCORE_ITEMS.forEach(item => {
+      const avg = td.reduce((s,d)=>s+d[item.key],0)/Math.max(td.length,1);
+      const pct = item.max>0?(avg/item.max*100):0;
+      const belowAvg = avg < allAvg[item.key];
+      html += `<td style="background:${belowAvg?'#fef2f2':'#f0fdf4'};font-weight:${belowAvg?700:400};color:${belowAvg?'#dc2626':'#16a34a'}">${avg.toFixed(2)}<br><span style="font-size:10px">(${pct.toFixed(0)}%)</span></td>`;
+    });
+    html += '</tr>';
+  });
+  html += '</table></div>';
+  document.getElementById('teamWeakness').innerHTML = html;
+}
+
+function renderTeamWeakDetail(teamData, team) {
+  const el = document.getElementById('teamWeak_'+team.replace(/\s/g,''));
+  if(!el) return;
+
+  // Top3 weak agencies
+  const agencies = [...new Set(teamData.map(d=>d.agencyName))];
+  const agencyScores = agencies.map(ag => {
+    const stores = teamData.filter(d=>d.agencyName===ag);
+    const prevAvg = stores.reduce((s,d)=>s+d.prevScore,0)/Math.max(stores.length,1);
+    const currAvg = stores.reduce((s,d)=>s+d.currScore,0)/Math.max(stores.length,1);
+    return {name:ag, drop:prevAvg-currAvg, stores};
+  }).sort((a,b)=>b.drop-a.drop).slice(0,3);
+
+  // Top5 weak stores: 전분기 대비 등급이 낮아진 매장만 표기 (점수 하락만인 경우 제외)
+  const weakStores = [...teamData]
+    .filter(d => {
+      const prevIdx = GRADE_ORDER.indexOf(d.prevGrade);
+      const currIdx = GRADE_ORDER.indexOf(d.currGrade);
+      return prevIdx !== -1 && currIdx !== -1 && currIdx > prevIdx;
+    })
+    .sort((a,b) => (b.prevScore-b.currScore)-(a.prevScore-a.currScore))
+    .slice(0,5);
+
+  let html = '<div style="display:flex;gap:16px;flex-wrap:wrap">';
+  html += '<div style="flex:1;min-width:300px"><h4 style="margin-bottom:8px;font-size:13px">🔴 취약 대리점 Top 3</h4>';
+  agencyScores.forEach((ag,i) => {
+    const weakItems = findWeakItems(ag.stores);
+    html += `<div class="improve-card"><div class="improve-title">${i+1}. ${ag.name} (평균점수 하락: ${ag.drop.toFixed(2)}점)</div>
+      <div class="improve-detail">부진항목: ${weakItems.map(w=>w.label+'('+w.gap.toFixed(1)+'점↓)').join(', ')}</div>
+      <div class="improve-detail" style="color:var(--success)">개선추천: ${weakItems.map(w=>w.label+' 강화').join(', ')}</div></div>`;
+  });
+  html += '</div>';
+
+  html += '<div style="flex:1;min-width:300px"><h4 style="margin-bottom:8px;font-size:13px">🔴 등급 하락 매장 Top 5 (전분기 대비)</h4>';
+  if (weakStores.length === 0) {
+    html += '<div class="improve-card" style="background:#f0fdf4;border-color:#6ee7b7"><div class="improve-title" style="color:#065f46">✅ 등급 하락 매장 없음</div><div class="improve-detail">전분기 대비 등급이 낮아진 매장이 없습니다.</div></div>';
+  } else {
+    weakStores.forEach((st,i) => {
+      const weakItems = findWeakItemsSingle(st);
+      html += `<div class="improve-card"><div class="improve-title">${i+1}. ${st.storeName} (${st.agencyName})</div>
+        <div class="improve-detail">등급하락: <strong style="color:var(--danger)">${st.prevGrade}→${st.currGrade}</strong> | 점수하락: ${(st.prevScore-st.currScore).toFixed(1)}점</div>
+        <div class="improve-detail">부진항목: ${weakItems.slice(0,3).map(w=>w.label+'('+w.pct.toFixed(0)+'%)').join(', ')}</div>
+        <div class="improve-detail" style="color:var(--success)">개선추천: ${weakItems.slice(0,3).map(w=>w.label+' +'+w.gap.toFixed(1)+'점 필요').join(', ')}</div></div>`;
+    });
+  }
+  html += '</div></div>';
+  el.innerHTML = html;
+}
+
+function findWeakItems(stores) {
+  return SCORE_ITEMS.map(item => {
+    const avg = stores.reduce((s,d)=>s+d[item.key],0)/Math.max(stores.length,1);
+    const gap = item.max - avg;
+    const pct = item.max>0?(avg/item.max*100):100;
+    return {...item, avg, gap, pct};
+  }).filter(i=>i.pct<70).sort((a,b)=>a.pct-b.pct).slice(0,5);
+}
+
+function findWeakItemsSingle(store) {
+  return SCORE_ITEMS.map(item => {
+    const val = store[item.key];
+    const gap = item.max - val;
+    const pct = item.max>0?(val/item.max*100):100;
+    return {...item, val, gap, pct};
+  }).filter(i=>i.pct<80).sort((a,b)=>a.pct-b.pct);
+}
+
+function renderBoundaryStores(data) {
+  const sorted = [...data].sort((a,b)=>a.currRank-b.currRank);
+  const boundaries = [];
+  const limits = [{grade:'S',max:16,next:'A'},{grade:'A',max:65,next:'B'},{grade:'B',max:98,next:'C'},{grade:'C',max:164,next:'D'}];
+  limits.forEach(({grade,max,next}) => {
+    const near = sorted.filter(d=>d.currGrade===next && d.currRank<=max+10 && d.currRank>max);
+    const atBound = sorted.filter(d=>d.currGrade===grade && d.currRank>=max-5 && d.currRank<=max);
+    near.forEach(d=>boundaries.push({...d, targetGrade:grade, distanceRank:d.currRank-max, type:'승급가능'}));
+    atBound.forEach(d=>boundaries.push({...d, targetGrade:next, distanceRank:max-d.currRank, type:'하락위험'}));
+  });
+
+  let html = '<div style="overflow-x:auto"><table class="data-table"><tr><th>상태</th><th>매장명</th><th>팀</th><th>대리점</th><th>현등급</th><th>순위</th><th>총점</th><th>경계등급</th><th>순위차</th><th>부족항목 & 필요점수</th></tr>';
+  boundaries.sort((a,b)=>a.currRank-b.currRank).forEach(d => {
+    const weak = findWeakItemsSingle(d).slice(0,3);
+    const weakText = weak.map(w=>`${w.label}(+${w.gap.toFixed(1)})`).join(', ');
+    html += `<tr>
+      <td><span class="boundary-badge">${d.type}</span></td>
+      <td style="font-weight:600;text-align:left">${d.storeName}</td>
+      <td>${d.team}</td><td>${d.agencyName}</td>
+      <td><span class="grade-badge ${d.currGrade}">${d.currGrade}</span></td>
+      <td>${d.currRank}</td><td>${d.currScore.toFixed(1)}</td>
+      <td>${d.targetGrade}</td><td>${d.distanceRank}위</td>
+      <td style="text-align:left;font-size:11px">${weakText||'-'}</td></tr>`;
+  });
+  html += '</table></div>';
+  document.getElementById('boundaryStores').innerHTML = html;
+}
+
+// ===== AGENCY TAB =====
+function renderAgencyTab() {
+  const agData = getFilteredAgencyData();
+  const storeData = getFilteredData();
+  if(!agData.length && !storeData.length) { document.getElementById('tabAgency').innerHTML='<div class="card"><p style="text-align:center;padding:20px;color:var(--text-secondary)">데이터가 없습니다.</p></div>'; return; }
+
+  let html = `<div class="card"><div class="card-header"><h3>🏢 대리점별 등급 현황 및 수수료 변화</h3><button class="pdf-btn" onclick="downloadPDF('tabAgency')">📄 PDF 다운로드</button></div>
+    <div class="chart-row"><div class="chart-col"><canvas id="agencyGradeChart" height="300"></canvas></div></div></div>`;
+
+  html += '<div class="card"><div class="card-header"><h3>📋 대리점별 상세 현황</h3></div><div style="overflow-x:auto"><table class="data-table"><tr><th>팀</th><th>대리점</th><th>담당</th>';
+  GRADE_ORDER.forEach(g=> html+=`<th style="background:${GRADE_COLORS[g]}">전${g}</th><th style="background:${GRADE_COLORS[g]}">현${g}</th>`);
+  html += '<th>전분기수수료</th><th>현분기수수료</th><th>증감</th><th>액션</th></tr>';
+
+  agData.forEach(ag => {
+    html += `<tr><td>${ag.team}</td><td style="font-weight:600"><span onclick="showVDFeeCalculator('${ag.name}')" style="cursor:pointer;color:var(--primary);text-decoration:underline;text-underline-offset:2px" title="💰 VD수수료 계산기 열기">${ag.name}</span></td><td>${ag.manager}</td>`;
+    GRADE_ORDER.forEach(g => {
+      const prev = ag['prev'+g]; const curr = ag['curr'+g];
+      const diff = curr-prev;
+      html += `<td>${prev}</td><td>${curr}${diff!==0?`<span class="change-badge ${diff>0?'up':'down'}">(${diff>0?'+':''}${diff})</span>`:''}</td>`;
+    });
+    html += `<td>${formatMoney(ag.prevFee)}</td><td>${formatMoney(ag.currFee)}</td>`;
+    html += `<td><span class="change-badge ${ag.feeChange>=0?'up':'down'}">${ag.feeChange>=0?'+':''}${formatMoney(ag.feeChange)}</span></td>`;
+    html += `<td><button onclick="showAgencyStores('${ag.name}')" style="padding:3px 8px;border:1px solid var(--primary);border-radius:4px;background:#fff;cursor:pointer;font-size:11px;color:var(--primary);margin-right:4px;font-family:inherit;">매장보기</button>`;
+    html += `<button onclick="showAgencyAnalysis('${ag.name}')" style="padding:3px 8px;border:1px solid var(--accent);border-radius:4px;background:#fff;cursor:pointer;font-size:11px;color:var(--accent);font-family:inherit;">분석결과</button></td></tr>`;
+  });
+  html += '</table></div></div>';
+  document.getElementById('tabAgency').innerHTML = html;
+
+  setTimeout(()=>{
+    if(agData.length<=20) renderAgencyGradeChart(agData);
+    else document.getElementById('agencyGradeChart')?.parentElement?.remove();
+  },100);
+}
+
+function renderAgencyGradeChart(agData) {
+  destroyChart('agencyGradeChart');
+  const labels = agData.map(a=>a.name);
+  STATE.chartInstances.agencyGradeChart = new Chart(document.getElementById('agencyGradeChart'), {
+    type:'bar', data:{labels, datasets:GRADE_ORDER.map(g=>({
+      label:g+'등급', data:agData.map(a=>a['curr'+g]), backgroundColor:GRADE_COLORS[g]+'cc'
+    }))},
+    options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',plugins:{legend:{position:'top'},title:{display:true,text:'대리점별 등급 분포'}},scales:{x:{stacked:true},y:{stacked:true}}}
+  });
+}
+
+function showAgencyStores(agencyName) {
+  const stores = STATE.rawData.filter(d=>d.agencyName===agencyName);
+  let html = `<button class="modal-close" onclick="closeModal()">✕</button><h2>🏪 ${agencyName} 소속 매장 현황</h2>`;
+  html += '<table class="data-table"><tr><th>매장명</th><th>담당</th><th>전분기등급</th><th>현분기등급</th><th>변동</th><th>전분기총점</th><th>현분기총점</th><th>수수료증감</th></tr>';
+  stores.sort((a,b)=>GRADE_ORDER.indexOf(a.currGrade)-GRADE_ORDER.indexOf(b.currGrade)).forEach(st => {
+    html += `<tr><td style="font-weight:600">${st.storeName}</td><td>${st.manager}</td>
+      <td><span class="grade-badge ${st.prevGrade}">${st.prevGrade}</span></td>
+      <td><span class="grade-badge ${st.currGrade}">${st.currGrade}</span></td>
+      <td><span class="change-badge ${st.gradeChangeDir==='상승'?'up':st.gradeChangeDir==='하락'?'down':'same'}">${st.gradeChangeDir||'유지'}</span></td>
+      <td>${st.prevScore.toFixed(1)}</td><td>${st.currScore.toFixed(1)}</td>
+      <td><span class="change-badge ${st.feeChange>=0?'up':'down'}">${st.feeChange>=0?'+':''}${formatMoney(st.feeChange)}</span></td></tr>`;
+  });
+  html += '</table>';
+  showModal(html);
+}
+
+function showAgencyAnalysis(agencyName) {
+  const stores = STATE.rawData.filter(d=>d.agencyName===agencyName);
+  const allAvg = {};
+  SCORE_ITEMS.forEach(item=> allAvg[item.key]=STATE.rawData.reduce((s,d)=>s+d[item.key],0)/Math.max(STATE.rawData.length,1));
+
+  let html = `<button class="modal-close" onclick="closeModal()">✕</button><h2>📊 ${agencyName} 심층 분석</h2>`;
+
+  // Weak stores
+  const weakStores = [...stores].sort((a,b)=>(b.prevScore-b.currScore)-(a.prevScore-a.currScore));
+  html += '<h3 style="margin:16px 0 8px;font-size:14px">📉 점수하락 매장</h3>';
+  weakStores.forEach(st => {
+    const dropped = st.prevScore - st.currScore;
+    if(dropped<=0) return;
+    const weak = findWeakItemsSingle(st).slice(0,4);
+    html += `<div class="improve-card"><div class="improve-title">${st.storeName} (${st.prevGrade}→${st.currGrade}, -${dropped.toFixed(1)}점)</div>
+      <div class="improve-detail">취약: ${weak.map(w=>w.label+'('+w.pct.toFixed(0)+'%)').join(', ')}</div>
+      <div class="improve-detail" style="color:var(--success)">개선: ${weak.map(w=>w.label+' +'+w.gap.toFixed(1)+'점').join(', ')}</div></div>`;
+  });
+
+  // Item-level analysis
+  html += '<h3 style="margin:16px 0 8px;font-size:14px">📊 항목별 분석 (전체평균 대비)</h3>';
+  html += '<table class="data-table"><tr><th>항목</th><th>대리점평균</th><th>전체평균</th><th>만점</th><th>달성율</th><th>상태</th></tr>';
+  SCORE_ITEMS.forEach(item => {
+    const agAvg = stores.reduce((s,d)=>s+d[item.key],0)/Math.max(stores.length,1);
+    const pct = item.max>0?(agAvg/item.max*100):100;
+    const vs = agAvg>=allAvg[item.key];
+    html += `<tr><td>${item.label}</td><td>${agAvg.toFixed(2)}</td><td>${allAvg[item.key].toFixed(2)}</td><td>${item.max}</td>
+      <td><div class="weakness-bar-bg"><div class="weakness-bar-fill" style="width:${Math.min(pct,100)}%;background:${pct>=70?'var(--success)':pct>=50?'var(--warning)':'var(--danger)'}"></div></div> ${pct.toFixed(0)}%</td>
+      <td style="color:${vs?'var(--success)':'var(--danger)'}; font-weight:700">${vs?'양호':'부족'}</td></tr>`;
+  });
+  html += '</table>';
+  showModal(html);
+}
+
+// ===== STORE TAB =====
+function renderStoreTab() {
+  const data = getFilteredData();
+  if(!data.length) { document.getElementById('tabStore').innerHTML='<div class="card"><p style="text-align:center;padding:20px;color:var(--text-secondary)">데이터가 없습니다.</p></div>'; return; }
+
+  let html = `<div class="card"><div class="card-header"><h3>🏪 매장별 VD등급 현황</h3><button class="pdf-btn" onclick="downloadPDF('tabStore')">📄 PDF 다운로드</button></div>`;
+
+  // Sub tabs by grade
+  html += '<div class="sub-tabs" id="storeSubTabs">';
+  html += '<div class="sub-tab active" data-grade="ALL" onclick="switchStoreGrade(\'ALL\')">전체</div>';
+  GRADE_ORDER.forEach(g => {
+    const cnt = data.filter(d=>d.currGrade===g).length;
+    html += `<div class="sub-tab" data-grade="${g}" onclick="switchStoreGrade('${g}')">${g}등급 (${cnt})</div>`;
+  });
+  html += '<div class="sub-tab" data-grade="BOUNDARY" onclick="switchStoreGrade(\'BOUNDARY\')">🎯 등급경계</div>';
+  html += '</div>';
+  html += '<div id="storeContent"></div></div>';
+  document.getElementById('tabStore').innerHTML = html;
+  switchStoreGrade('ALL');
+}
+
+function switchStoreGrade(grade) {
+  document.querySelectorAll('#storeSubTabs .sub-tab').forEach(t=>t.classList.toggle('active', t.dataset.grade===grade));
+  const data = getFilteredData();
+  let filtered = grade==='ALL'? data : grade==='BOUNDARY'? getBoundaryStores(data) : data.filter(d=>d.currGrade===grade);
+  filtered.sort((a,b)=>a.currRank-b.currRank);
+
+  let html = '<div style="overflow-x:auto"><table class="data-table"><tr><th>#</th><th>매장명</th><th>팀</th><th>대리점</th><th>전등급</th><th>현등급</th><th>변동</th><th>총점</th><th>순위</th><th>예상수수료</th><th>증감</th><th>취약항목</th></tr>';
+  filtered.forEach((st,i) => {
+    const weak = findWeakItemsSingle(st).slice(0,3);
+    html += `<tr>
+      <td>${i+1}</td>
+      <td style="font-weight:600;text-align:left">${st.storeName}</td>
+      <td>${st.team}</td><td>${st.agencyName}</td>
+      <td><span class="grade-badge ${st.prevGrade}">${st.prevGrade}</span></td>
+      <td><span class="grade-badge ${st.currGrade}">${st.currGrade}</span></td>
+      <td><span class="change-badge ${st.gradeChangeDir==='상승'?'up':st.gradeChangeDir==='하락'?'down':'same'}">${st.gradeChangeDir||'유지'}</span></td>
+      <td>${st.currScore.toFixed(1)}</td><td>${st.currRank}</td>
+      <td>${formatMoney(st.expectedFee)}</td>
+      <td><span class="change-badge ${st.feeChange>=0?'up':'down'}">${st.feeChange>=0?'+':''}${formatMoney(st.feeChange)}</span></td>
+      <td style="text-align:left;font-size:11px">${weak.map(w=>'<span style="color:var(--danger)">'+w.label+'('+w.pct.toFixed(0)+'%)</span>').join(', ')||'<span style="color:var(--success)">양호</span>'}</td></tr>`;
+  });
+  html += '</table></div>';
+
+  if(grade==='BOUNDARY') {
+    html += '<div style="margin-top:16px"><h4 style="margin-bottom:8px">📋 등급 경계 매장 개선 가이드</h4>';
+    filtered.forEach(st => {
+      const weak = findWeakItemsSingle(st).slice(0,3);
+      const targetGrade = GRADE_ORDER[Math.max(0,GRADE_ORDER.indexOf(st.currGrade)-1)];
+      html += `<div class="improve-card"><div class="improve-title">${st.storeName} (현 ${st.currGrade}등급 → ${targetGrade}등급 목표)</div>
+        <div class="improve-detail">순위: ${st.currRank}위 | 총점: ${st.currScore.toFixed(1)}점</div>
+        <div class="improve-detail" style="color:var(--accent)">개선포인트: ${weak.map(w=>w.label+' +'+w.gap.toFixed(1)+'점(현재 '+w.pct.toFixed(0)+'%)').join(' | ')}</div></div>`;
+    });
+    html += '</div>';
+  }
+  document.getElementById('storeContent').innerHTML = html;
+}
+
+function getBoundaryStores(data) {
+  const sorted = [...data].sort((a,b)=>a.currRank-b.currRank);
+  const result = [];
+  const limits = [{grade:'S',max:16},{grade:'A',max:65},{grade:'B',max:98},{grade:'C',max:164}];
+  limits.forEach(({grade,max}) => {
+    sorted.filter(d=>d.currRank>=max-5 && d.currRank<=max+10).forEach(d=>{
+      if(!result.find(r=>r.storeCode===d.storeCode)) result.push(d);
+    });
+  });
+  return result;
+}
+
+// ===== RAW LIST TAB =====
+function renderRawListTab() {
+  const data = getFilteredData();
+  const pageSize = 50;
+  const totalPages = Math.ceil(data.length/pageSize);
+  STATE.rawPage = Math.min(STATE.rawPage, totalPages||1);
+  const page = STATE.rawPage;
+  const start = (page-1)*pageSize;
+  const pageData = data.slice(start, start+pageSize);
+
+  let html = `<div class="card"><div class="card-header"><h3>📋 상세 리스트 (${data.length}건)</h3>
+    <div><button class="pdf-btn" onclick="exportExcel()" style="background:var(--success);margin-right:8px">📥 엑셀 다운로드</button>
+    <button class="pdf-btn" onclick="downloadPDF('tabRawlist')">📄 PDF 다운로드</button></div></div>`;
+  html += '<div style="overflow-x:auto"><table class="data-table"><tr><th>순위</th><th>팀</th><th>대리점</th><th>매장명</th><th>담당</th><th>전등급</th><th>현등급</th><th>총점</th><th>순위율</th><th>예상수수료</th><th>수수료증감</th>';
+  SCORE_ITEMS.forEach(item=> html+=`<th>${item.label}</th>`);
+  html += '</tr>';
+
+  pageData.forEach(st => {
+    html += `<tr><td>${st.currRank}</td><td>${st.team}</td><td>${st.agencyName}</td>
+      <td style="font-weight:600;text-align:left">${st.storeName}</td><td>${st.manager}</td>
+      <td><span class="grade-badge ${st.prevGrade}">${st.prevGrade}</span></td>
+      <td><span class="grade-badge ${st.currGrade}">${st.currGrade}</span></td>
+      <td>${st.currScore.toFixed(1)}</td><td>${(st.rankRate*100).toFixed(1)}%</td>
+      <td>${formatMoney(st.expectedFee)}</td>
+      <td><span class="change-badge ${st.feeChange>=0?'up':'down'}">${st.feeChange>=0?'+':''}${formatMoney(st.feeChange)}</span></td>`;
+    SCORE_ITEMS.forEach(item => {
+      const pct = item.max>0?(st[item.key]/item.max*100):100;
+      html += `<td style="color:${pct>=80?'var(--success)':pct>=50?'var(--warning)':'var(--danger)'}">${st[item.key].toFixed(1)}</td>`;
+    });
+    html += '</tr>';
+  });
+  html += '</table></div>';
+
+  // Pagination
+  if(totalPages>1) {
+    html += '<div class="pagination">';
+    html += `<button class="page-btn" onclick="goRawPage(${Math.max(1,page-1)})" ${page<=1?'disabled':''}>◀</button>`;
+    for(let p=Math.max(1,page-3); p<=Math.min(totalPages,page+3); p++) {
+      html += `<button class="page-btn ${p===page?'active':''}" onclick="goRawPage(${p})">${p}</button>`;
+    }
+    html += `<button class="page-btn" onclick="goRawPage(${Math.min(totalPages,page+1)})" ${page>=totalPages?'disabled':''}>▶</button>`;
+    html += `<span style="margin-left:8px;font-size:12px;color:var(--text-secondary)">${page}/${totalPages} 페이지</span></div>`;
+  }
+  html += '</div>';
+  document.getElementById('tabRawlist').innerHTML = html;
+}
+
+function goRawPage(p) { STATE.rawPage=p; renderRawListTab(); }
+
+function exportExcel() {
+  const data = getFilteredData();
+  const rows = [['순위','팀','대리점','매장명','담당','전등급','현등급','총점','순위율','예상수수료','수수료증감',...SCORE_ITEMS.map(i=>i.label)]];
+  data.forEach(st => {
+    rows.push([st.currRank,st.team,st.agencyName,st.storeName,st.manager,st.prevGrade,st.currGrade,
+      st.currScore.toFixed(1),(st.rankRate*100).toFixed(1)+'%',Math.round(st.expectedFee),Math.round(st.feeChange),
+      ...SCORE_ITEMS.map(i=>st[i.key].toFixed(2))]);
+  });
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'VD등급현황');
+  XLSX.writeFile(wb, 'VD등급현황_'+STATE.baseDate+'.xlsx');
+}
+
+// ===== NOTICE TAB =====
+function renderNoticeTab() {
+  let html = '';
+  if(STATE.role==='admin') {
+    html += `<div class="card"><div class="card-header"><h3>📝 공지사항 작성</h3></div>
+      <div class="notice-form">
+        <input type="text" id="noticeTitle" placeholder="제목을 입력하세요">
+        <textarea id="noticeBody" placeholder="내용을 입력하세요"></textarea>
+        <div style="margin:8px 0">
+          <label style="font-size:12px;cursor:pointer;color:var(--primary)">📎 첨부파일: <input type="file" id="noticeFile" multiple style="font-size:12px"></label>
+          <label style="font-size:12px;cursor:pointer;color:var(--primary);margin-left:12px">🖼️ 이미지: <input type="file" id="noticeImage" accept="image/*" style="font-size:12px"></label>
+        </div>
+        <button onclick="postNotice()" style="padding:8px 20px;background:var(--primary);color:#fff;border:none;border-radius:6px;cursor:pointer;font-family:inherit;font-weight:600;">등록</button>
+      </div></div>`;
+  }
+
+  html += '<div class="card"><div class="card-header"><h3>📢 공지사항</h3></div>';
+  if(!STATE.notices.length) html += '<p style="text-align:center;padding:20px;color:var(--text-secondary)">등록된 공지사항이 없습니다.</p>';
+  STATE.notices.slice().reverse().forEach((n,i) => {
+    html += `<div class="notice-item"><h4>${n.title}</h4>
+      <div class="notice-meta">${n.date} | 작성자: 관리자</div>
+      <div class="notice-body">${n.body.replace(/\n/g,'<br>')}${n.image?'<br><img src="'+n.image+'" style="max-width:100%;margin-top:8px;border-radius:8px">':''}</div>
+      ${n.files&&n.files.length?'<div class="notice-files">첨부: '+n.files.map(f=>'<a href="'+f.url+'" download="'+f.name+'">📎 '+f.name+'</a>').join(' ')+'</div>':''}
+      ${STATE.role==='admin'?'<button onclick="deleteNotice('+n.id+')" style="margin-top:8px;padding:4px 10px;border:1px solid var(--danger);border-radius:4px;background:#fff;color:var(--danger);cursor:pointer;font-size:11px;font-family:inherit;">삭제</button>':''}
+    </div>`;
+  });
+  html += '</div>';
+  document.getElementById('tabNotice').innerHTML = html;
+}
+
+function postNotice() {
+  const title = document.getElementById('noticeTitle').value.trim();
+  const body = document.getElementById('noticeBody').value.trim();
+  if(!title || !body) { alert('제목과 내용을 입력해주세요.'); return; }
+  const notice = {id:Date.now(), title, body, date:new Date().toISOString().slice(0,10), files:[], image:null};
+
+  // Handle image
+  const imgInput = document.getElementById('noticeImage');
+  if(imgInput.files[0]) {
+    const reader = new FileReader();
+    reader.onload = e=>{ notice.image=e.target.result; finishPost(notice); };
+    reader.readAsDataURL(imgInput.files[0]);
+  } else finishPost(notice);
+
+  // Handle files
+  const fileInput = document.getElementById('noticeFile');
+  if(fileInput.files.length) {
+    [...fileInput.files].forEach(f => {
+      const reader = new FileReader();
+      reader.onload = e=>notice.files.push({name:f.name, url:e.target.result});
+      reader.readAsDataURL(f);
+    });
+  }
+}
+
+function finishPost(notice) {
+  STATE.notices.push(notice);
+  saveToStorage('notices', STATE.notices);
+  renderNoticeTab();
+}
+
+function deleteNotice(id) {
+  if(!confirm('삭제하시겠습니까?')) return;
+  STATE.notices = STATE.notices.filter(n=>n.id!==id);
+  saveToStorage('notices', STATE.notices);
+  renderNoticeTab();
+}
+
+// ===== USAGE TAB =====
+function renderUsageTab() {
+  if(STATE.role!=='admin') return;
+  const log = STATE.viewLog;
+  const today = new Date().toISOString().slice(0,10);
+  const month = today.slice(0,7);
+
+  // Aggregate by team/agency/store
+  const agg = (type) => {
+    const items = {};
+    log.filter(v=>v.type===type).forEach(v => {
+      if(!items[v.name]) items[v.name]={name:v.name,total:0,today:0,month:0};
+      items[v.name].total++;
+      if(v.date===today) items[v.name].today++;
+      if(v.date.startsWith(month)) items[v.name].month++;
+    });
+    return Object.values(items).sort((a,b)=>b.month-a.month);
+  };
+
+  const teamUsage = agg('team');
+  const agencyUsage = agg('agency');
+  const storeUsage = agg('store');
+
+  let html = `<div class="card"><div class="card-header"><h3>📈 대시보드 활용 현황</h3></div>
+    <div class="sub-tabs" id="usageSubTabs">
+      <div class="sub-tab active" data-type="team" onclick="switchUsageType('team')">팀별</div>
+      <div class="sub-tab" data-type="agency" onclick="switchUsageType('agency')">대리점별</div>
+      <div class="sub-tab" data-type="store" onclick="switchUsageType('store')">매장별</div>
+    </div>
+    <div id="usageContent"></div></div>`;
+  document.getElementById('tabUsage').innerHTML = html;
+
+  window._usageData = {team:teamUsage, agency:agencyUsage, store:storeUsage};
+  switchUsageType('team');
+}
+
+function switchUsageType(type) {
+  document.querySelectorAll('#usageSubTabs .sub-tab').forEach(t=>t.classList.toggle('active', t.dataset.type===type));
+  const data = window._usageData[type]||[];
+  let html = '<table class="data-table"><tr><th>#</th><th>이름</th><th>오늘</th><th>월누적</th><th>전체</th></tr>';
+  if(!data.length) html += '<tr><td colspan="5" style="padding:20px;color:var(--text-secondary)">조회 기록이 없습니다.</td></tr>';
+  data.forEach((d,i)=> html+=`<tr><td>${i+1}</td><td style="font-weight:600">${d.name}</td><td>${d.today}</td><td>${d.month}</td><td>${d.total}</td></tr>`);
+  html += '</table>';
+  document.getElementById('usageContent').innerHTML = html;
+}
+
+// ===== PDF DOWNLOAD =====
+async function downloadPDF(targetId) {
+  const el = document.getElementById(targetId);
+  if(!el) return;
+  try {
+    const canvas = await html2canvas(el, {scale:2, useCORS:true, logging:false, width:el.scrollWidth});
+    const {jsPDF} = window.jspdf;
+    const pdf = new jsPDF('p','mm','a4');
+    const pageW = pdf.internal.pageSize.getWidth()-20;
+    const pageH = pdf.internal.pageSize.getHeight()-20;
+    const imgW = pageW;
+    const imgH = canvas.height * imgW / canvas.width;
+    let y = 10;
+    if(imgH <= pageH) {
+      pdf.addImage(canvas.toDataURL('image/jpeg',0.95),'JPEG',10,10,imgW,imgH);
+    } else {
+      // Multi-page
+      const sliceH = Math.floor(canvas.width * pageH / imgW);
+      let srcY = 0;
+      while(srcY < canvas.height) {
+        const h = Math.min(sliceH, canvas.height - srcY);
+        const sliceCanvas = document.createElement('canvas');
+        sliceCanvas.width = canvas.width;
+        sliceCanvas.height = h;
+        sliceCanvas.getContext('2d').drawImage(canvas, 0, srcY, canvas.width, h, 0, 0, canvas.width, h);
+        const realH = h * imgW / canvas.width;
+        if(srcY>0) pdf.addPage();
+        pdf.addImage(sliceCanvas.toDataURL('image/jpeg',0.95),'JPEG',10,10,imgW,realH);
+        srcY += h;
+      }
+    }
+    pdf.save('VD등급현황_'+STATE.currentTab+'_'+STATE.baseDate+'.pdf');
+  } catch(e) { alert('PDF 생성 중 오류: '+e.message); }
+}
+
+
+// ===== VD수수료 계산기 =====
+function showVDFeeCalculator(agencyName) {
+  const stores = STATE.rawData.filter(d => d.agencyName === agencyName);
+  if (!stores.length) { alert('소속 매장 데이터가 없습니다.'); return; }
+
+  window._simStores = stores.map(st => ({
+    ...st,
+    simItems: SCORE_ITEMS.map(item => {
+      const cur = st[item.key];
+      const achieved = item.max > 0 ? (cur / item.max >= 0.8) : true;
+      return { key: item.key, label: item.label, max: item.max, current: cur, achieved, locked: achieved };
+    }),
+    simScore: st.currScore,
+    simGrade: st.currGrade,
+    simFee: st.expectedFee
+  }));
+  window._simAgencyName = agencyName;
+  renderVDFeeCalculator();
+}
+
+function calcSimGrade(simScore, origStoreCode) {
+  const rank = STATE.rawData.filter(s => s.storeCode !== origStoreCode && s.currScore > simScore).length + 1;
+  if (rank <= 16) return 'S';
+  if (rank <= 65) return 'A';
+  if (rank <= 98) return 'B';
+  if (rank <= 164) return 'C';
+  return 'D';
+}
+
+function calcSimFee(store, newGrade) {
+  if (store.currGrade === newGrade) return store.expectedFee;
+  const sameGrade = STATE.rawData.filter(s => s.currGrade === newGrade && s.payRate > 0);
+  const avgRate = sameGrade.length > 0
+    ? sameGrade.reduce((s, d) => s + d.payRate, 0) / sameGrade.length
+    : store.payRate;
+  const workload = store.payRate > 0 ? store.expectedFee / store.payRate : store.expectedFee;
+  return workload * avgRate;
+}
+
+function toggleSimItem(storeIdx, itemIdx) {
+  const st = window._simStores[storeIdx];
+  const item = st.simItems[itemIdx];
+  if (item.locked) return;
+
+  item.achieved = !item.achieved;
+  if (item.achieved) {
+    item.current = item.max;
+  } else {
+    const orig = STATE.rawData.find(s => s.storeCode === st.storeCode);
+    item.current = orig ? orig[item.key] : 0;
+  }
+
+  const origBase = SCORE_ITEMS.reduce((s, i) => {
+    const orig = STATE.rawData.find(r => r.storeCode === st.storeCode);
+    return s + (orig ? orig[i.key] : 0);
+  }, 0);
+  const newSum = st.simItems.reduce((s, i) => s + i.current, 0);
+  st.simScore = st.currScore + (newSum - origBase);
+  st.simGrade = calcSimGrade(st.simScore, st.storeCode);
+  st.simFee = calcSimFee(st, st.simGrade);
+  renderVDFeeCalculator();
+}
+
+function renderVDFeeCalculator() {
+  const simStores = window._simStores;
+  const agencyName = window._simAgencyName;
+  const totalOrig = simStores.reduce((s, st) => s + st.expectedFee, 0);
+  const totalSim = simStores.reduce((s, st) => s + st.simFee, 0);
+  const totalDiff = totalSim - totalOrig;
+
+  let html = `<button class="modal-close" onclick="closeModal()">✕</button>
+  <h2 style="margin-bottom:16px">💰 ${agencyName} — VD수수료 계산기</h2>
+  <div style="background:#eff6ff;border-radius:10px;padding:14px;margin-bottom:16px;display:flex;gap:12px;flex-wrap:wrap;align-items:center;justify-content:center">
+    <div style="text-align:center;flex:1;min-width:100px">
+      <div style="font-size:11px;color:var(--text-secondary);margin-bottom:4px">현재 합계 수수료</div>
+      <div style="font-size:18px;font-weight:700;color:var(--primary)">${formatMoney(totalOrig)}</div>
+    </div>
+    <div style="font-size:22px;color:var(--text-secondary)">→</div>
+    <div style="text-align:center;flex:1;min-width:100px">
+      <div style="font-size:11px;color:var(--text-secondary);margin-bottom:4px">개선 후 예상 수수료</div>
+      <div style="font-size:18px;font-weight:700;color:var(--success)">${formatMoney(totalSim)}</div>
+    </div>
+    <div style="text-align:center;flex:1;min-width:100px;background:${totalDiff>0?'#d1fae5':totalDiff<0?'#fee2e2':'#f1f5f9'};border-radius:8px;padding:8px">
+      <div style="font-size:11px;color:var(--text-secondary);margin-bottom:4px">증가분</div>
+      <div style="font-size:18px;font-weight:700;color:${totalDiff>0?'var(--success)':totalDiff<0?'var(--danger)':'var(--text-secondary)'}">
+        ${totalDiff>=0?'+':''}${formatMoney(totalDiff)}
+      </div>
+    </div>
+  </div>
+  <p style="font-size:11px;color:var(--text-secondary);margin-bottom:12px;text-align:center">
+    ❌ 미달성 항목 클릭 시 달성으로 변경되어 수수료가 재계산됩니다. ✅ 는 이미 달성된 항목입니다.
+  </p>`;
+
+  simStores.forEach((st, sIdx) => {
+    const achCnt = st.simItems.filter(i => i.achieved).length;
+    const totCnt = st.simItems.length;
+    const feeDiff = st.simFee - st.expectedFee;
+    const gradeChanged = st.simGrade !== st.currGrade;
+
+    html += `<div style="margin-bottom:14px;border:2px solid ${GRADE_COLORS[st.simGrade]};border-radius:10px;overflow:hidden">
+      <div style="background:${GRADE_COLORS[st.simGrade]};color:#fff;padding:9px 14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <strong style="font-size:13px">${st.storeName}</strong>
+        <span style="background:rgba(255,255,255,0.25);padding:2px 8px;border-radius:10px;font-size:11px">${gradeChanged?st.currGrade+'→':''}${st.simGrade}등급${gradeChanged?' ⬆':''}</span>
+        <span style="font-size:11px">점수: ${st.simScore.toFixed(1)}</span>
+        <span style="font-size:11px">달성 ${achCnt}/${totCnt}</span>
+        <span style="margin-left:auto;font-size:12px;font-weight:700">${formatMoney(st.expectedFee)}</span>
+        <span style="font-size:12px;font-weight:700;color:#fde68a">→ ${formatMoney(st.simFee)}</span>
+        ${feeDiff>0?`<span style="font-size:11px;background:rgba(255,255,255,0.2);padding:1px 6px;border-radius:6px">+${formatMoney(feeDiff)}</span>`:''}
+      </div>
+      <div style="padding:10px;display:flex;flex-wrap:wrap;gap:5px">`;
+
+    st.simItems.forEach((item, iIdx) => {
+      const bg = item.achieved ? '#d1fae5' : '#fee2e2';
+      const tc = item.achieved ? '#065f46' : '#991b1b';
+      const bc = item.achieved ? '#6ee7b7' : '#fca5a5';
+      const cur = item.current.toFixed(1);
+      html += `<div onclick="toggleSimItem(${sIdx},${iIdx})"
+        style="padding:5px 8px;border-radius:6px;border:1px solid ${bc};background:${bg};color:${tc};
+        font-size:11px;cursor:${item.locked?'default':'pointer'};transition:all .15s;user-select:none;text-align:center"
+        title="${item.locked?'이미 달성된 항목':'클릭하여 달성/미달성 전환'}">
+        ${item.achieved?'✅':'❌'} ${item.label}<br>
+        <span style="font-size:10px;opacity:0.75">${cur}/${item.max}</span>
+      </div>`;
+    });
+    html += '</div></div>';
+  });
+
+  showModal(html);
+}
+
+// ===== MODAL =====
+function showModal(html) {
+  document.getElementById('modalContainer').innerHTML = `<div class="modal-overlay" onclick="if(event.target===this)closeModal()"><div class="modal">${html}</div></div>`;
+}
+function closeModal() { document.getElementById('modalContainer').innerHTML=''; }
+
+// ===== CHART UTIL =====
+function destroyChart(id) { if(STATE.chartInstances[id]) { STATE.chartInstances[id].destroy(); delete STATE.chartInstances[id]; } }
+
+// ===== INIT ON LOAD =====
+window.addEventListener('load', ()=>{
+  // Check if already logged in via session
+});
+
+// PWA Install prompt
+let deferredPrompt;
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredPrompt = e;
+});
+
+// Register minimal service worker for PWA
+if ('serviceWorker' in navigator) {
+  const swCode = `self.addEventListener('fetch', e => e.respondWith(fetch(e.request)));`;
+  const blob = new Blob([swCode], {type:'application/javascript'});
+  navigator.serviceWorker.register(URL.createObjectURL(blob)).catch(()=>{});
+}
+
+// Firebase 자동 초기화는 페이지 로드 시 상단에서 처리됩니다
+</script>
+</body>
+</html>
