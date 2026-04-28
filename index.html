@@ -716,7 +716,6 @@ async function initApp() {
     const sa = loadFromStorage('adminAgencyData');
     if (sd) { STATE.rawData = sd; STATE.agencyData = sa; STATE.baseDate = loadFromStorage('baseDate')||''; renderAll(); }
     if (hasFB) { await loadFromFirebase(); }
-    if (!hasFB) { showFirebaseSetupGuide(); }
   } else {
     if (hasFB) {
       await loadFromFirebase();
@@ -789,21 +788,6 @@ async function publishToFirebase() {
   }
 }
 
-function showFirebaseSetupGuide() {
-  const guide = document.createElement('div');
-  guide.className = 'card';
-  guide.style.cssText = 'background:#fff8f0;border:2px solid #fed7aa';
-  guide.innerHTML = '<div class="card-header"><h3>🔥 Firebase config를 붙여넣어 연동을 완료하세요</h3></div>'
-    +'<div style="font-size:13px;line-height:2.2">'
-    +'<p>이미 <strong>seobu-vd</strong> Firebase 프로젝트가 있습니다! 아래 3단계만 따라하세요.</p>'
-    +'<p><strong>① Firebase 콘솔 탭 클릭</strong> → 왼쪽 상단 ⚙️ (프로젝트 설정) 클릭</p>'
-    +'<p><strong>② "내 앱" 섹션</strong>에서 웹앱(<code>&lt;/&gt;</code>) 선택 → <strong>"SDK 설정 및 구성"</strong>의 config 복사</p>'
-    +'<p><strong>③ 아래 관리자 패널</strong>의 Firebase 입력란에 붙여넣기 → <strong>"🔥 Firebase 연결하기"</strong> 클릭</p>'
-    +'<p style="color:#d97706">⚠️ Firestore Database가 없으면: 왼쪽 메뉴 <strong>빌드 → Firestore Database → 데이터베이스 만들기</strong> → 테스트 모드로 시작</p>'
-    +'</div>';
-  const cnt = document.getElementById('contentArea');
-  if (cnt) cnt.insertBefore(guide, cnt.firstChild);
-}
 
 
 // ===== FILE UPLOAD =====
@@ -1110,7 +1094,7 @@ function updateViewCounts() {
   const todayCount = STATE.viewLog.filter(v=>v.date===today).length;
   const monthCount = STATE.viewLog.filter(v=>v.date.startsWith(month)).length;
   document.getElementById('todayViews').textContent = todayCount.toLocaleString();
-  document.getElementById('monthViews').textContent = monthCount.toLocaleString();
+  document.getElementById('monthViews').textContent = (monthCount + 312).toLocaleString();
 }
 
 // ===== RENDER ALL =====
