@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>서부본부 VD평가 대시보드 활용 매뉴얼</title>
+<style>
+  :root {
+    --primary: #1e3a5f;
+    --accent: #2e86de;
+    --green: #00b894;
+    --red: #e74c3c;
+    --purple: #6c5ce7;
+    --bg: #f0f4f8;
+    --card: #ffffff;
+    --text: #2d3748;
+    --muted: #718096;
+    --border: #e2e8f0;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif; background: var(--bg); color: var(--text); font-size: 13px; line-height: 1.6; }
+  .hero { background: linear-gradient(135deg, #1e3a5f 0%, #2e86de 60%, #48cae4 100%); color: white; padding: 32px 40px 24px; position: relative; overflow: hidden; }
+  .hero::before { content: ''; position: absolute; top: -60px; right: -60px; width: 220px; height: 220px; background: rgba(255,255,255,0.07); border-radius: 50%; }
+  .hero-inner { max-width: 1100px; margin: 0 auto; position: relative; z-index: 1; }
+  .hero h1 { font-size: 22px; font-weight: 700; letter-spacing: -0.5px; }
+  .hero h1 span { opacity: 0.75; font-size: 14px; font-weight: 400; margin-left: 8px; }
+  .hero-sub { margin-top: 6px; opacity: 0.85; font-size: 12px; }
+  .hero-badges { margin-top: 14px; display: flex; gap: 8px; flex-wrap: wrap; }
+  .badge { background: rgba(255,255,255,0.18); border: 1px solid rgba(255,255,255,0.3); padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+  .container { max-width: 1100px; margin: 0 auto; padding: 28px 20px 60px; }
+  .section-title { font-size: 14px; font-weight: 700; color: var(--primary); padding-bottom: 8px; border-bottom: 2px solid var(--accent); margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; margin-bottom: 24px; }
+  .grid-4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 12px; margin-bottom: 24px; }
+  .card { background: var(--card); border-radius: 12px; padding: 18px 20px; box-shadow: 0 1px 4px rgba(0,0,0,0.07); border: 1px solid var(--border); }
+  .card-title { font-size: 13px; font-weight: 700; margin-bottom: 10px; display: flex; align-items: center; gap: 6px; color: var(--primary); }
+  .tab-icon { width: 28px; height: 28px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 15px; flex-shrink: 0; }
+  .feat-list { list-style: none; }
+  .feat-list li { padding: 5px 0; padding-left: 18px; position: relative; font-size: 12px; color: var(--text); border-bottom: 1px solid #f7f7f7; }
+  .feat-list li:last-child { border-bottom: none; }
+  .feat-list li::before { content: '▸'; position: absolute; left: 0; color: var(--accent); font-size: 11px; }
+  .feat-list li strong { color: var(--primary); }
+  .chip { display: inline-block; background: #eef2ff; color: var(--accent); font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 4px; margin-left: 4px; }
+  .login-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 24px; }
+  .login-card { background: var(--card); border-radius: 12px; padding: 16px 20px; border: 2px solid var(--border); box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
+  .login-card.admin { border-color: #fed7d7; background: #fffafa; }
+  .login-card.user { border-color: #bee3f8; background: #f0f8ff; }
+  .lc-header { font-size: 13px; font-weight: 700; margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
+  .lc-pw { font-size: 11px; color: var(--muted); background: #f8f8f8; border-radius: 6px; padding: 4px 10px; font-family: monospace; margin-bottom: 8px; display: inline-block; }
+  .stat-bar { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 24px; }
+  .stat-item { background: var(--card); border-radius: 10px; padding: 12px 14px; border: 1px solid var(--border); text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+  .s-label { font-size: 10px; color: var(--muted); margin-bottom: 3px; }
+  .s-val { font-size: 16px; font-weight: 700; color: var(--primary); }
+  .s-sub { font-size: 10px; color: var(--muted); margin-top: 1px; }
+  .grade-row { display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
+  .grade-b { width: 28px; height: 28px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 800; color: white; }
+  .g-s { background: #f9ca24; color: #333; }
+  .g-a { background: #00b894; }
+  .g-b { background: #2e86de; }
+  .g-c { background: #fd7e14; }
+  .g-d { background: #e74c3c; }
+  .highlight-box { background: linear-gradient(135deg, #667eea15, #764ba215); border: 1px solid #764ba230; border-radius: 10px; padding: 12px 16px; margin-bottom: 24px; }
+  .hb-title { font-size: 12px; font-weight: 700; color: var(--purple); margin-bottom: 6px; }
+  .highlight-box p { font-size: 11px; color: #4a5568; line-height: 1.7; }
+  .tip-box { background: #fffbeb; border: 1px solid #fcd34d; border-radius: 10px; padding: 10px 14px; margin-top: 10px; font-size: 11px; color: #78350f; }
+  .tip-box strong { color: #b45309; }
+  .admin-card { background: linear-gradient(135deg, #fff5f5, #fffafa); border: 1.5px solid #fc8181; border-radius: 12px; padding: 16px 20px; }
+  .admin-card .card-title { color: #c53030; }
+  .firebase-card { background: linear-gradient(135deg, #fff7f0, #fff9f5); border: 1.5px solid #f6a623; border-radius: 12px; padding: 16px 20px; }
+  .tag { display: inline-block; font-size: 10px; font-weight: 700; padding: 1px 7px; border-radius: 4px; margin-left: 3px; vertical-align: middle; }
+  .tag-admin { background: #fed7d7; color: #c53030; }
+  .tag-user { background: #bee3f8; color: #2b6cb0; }
+  .tag-sync { background: #e9d8fd; color: #553c9a; }
+  .tab-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 24px; }
+  .tab-pill { display: flex; align-items: center; gap: 5px; padding: 5px 12px; border-radius: 20px; font-size: 11px; font-weight: 700; border: 2px solid; cursor: default; }
+  .divider { height: 1px; background: var(--border); margin: 24px 0; }
+  .step-row { display: flex; gap: 10px; margin-top: 8px; flex-wrap: wrap; }
+  .step { flex: 1; min-width: 140px; background: #f8faff; border: 1px solid #c3d0e8; border-radius: 8px; padding: 10px 12px; position: relative; }
+  .step-num { position: absolute; top: -10px; left: 12px; background: var(--accent); color: white; width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; }
+  .step p { font-size: 11px; color: #4a5568; margin-top: 4px; }
+  .step strong { font-size: 11px; color: var(--primary); display: block; }
+  .manual-footer { background: var(--primary); color: rgba(255,255,255,0.7); text-align: center; padding: 16px; font-size: 11px; }
+  .manual-footer strong { color: white; }
+  @media (max-width: 768px) {
+    .grid-2, .grid-3, .grid-4, .login-grid { grid-template-columns: 1fr; }
+    .stat-bar { grid-template-columns: 1fr 1fr; }
+    .hero { padding: 20px; }
+    .container { padding: 16px 12px 40px; }
+  }
+  @media print {
+    body { background: white; }
+    .hero { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .card, .login-card, .stat-item { break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="hero-inner">
+    <h1>서부본부 VD평가 현황 대시보드 <span>활용 매뉴얼</span></h1>
+    <div class="hero-sub">팀별·대리점별·매장별 VD평가 성과를 실시간으로 분석하고 관리하는 통합 대시보드</div>
+    <div class="hero-badges">
+      <span class="badge">📊 6개 탭 구성</span>
+      <span class="badge">🔥 Firebase 실시간 연동</span>
+      <span class="badge">🔒 사용자 / 관리자 분리</span>
+      <span class="badge">📱 모바일 지원</span>
+      <span class="badge">💰 수수료 계산기</span>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+
+  <div class="section-title">📈 ① 상단 통계 바 — 전체 현황 한눈에</div>
+  <div class="stat-bar">
+    <div class="stat-item">
+      <div class="s-label">👁 오늘 조회수</div>
+      <div class="s-val">실시간</div>
+      <div class="s-sub">일별 누적 카운트</div>
+    </div>
+    <div class="stat-item">
+      <div class="s-label">📅 월간 누적</div>
+      <div class="s-val">312~</div>
+      <div class="s-sub">기준치 + 실시간 합산</div>
+    </div>
+    <div class="stat-item">
+      <div class="s-label">🏪 총 매장수</div>
+      <div class="s-val">자동</div>
+      <div class="s-sub">업로드 데이터 기준</div>
+    </div>
+    <div class="stat-item">
+      <div class="s-label">💰 총 수수료</div>
+      <div class="s-val">자동</div>
+      <div class="s-sub">전체 집계 금액</div>
+    </div>
+  </div>
+
+  <div class="section-title">🔍 ② 필터 시스템 — 원하는 데이터만 조회</div>
+  <div class="grid-4" style="margin-bottom:10px;">
+    <div class="card" style="padding:12px 14px;">
+      <div class="card-title" style="font-size:11px;">👥 팀 선택</div>
+      <p style="font-size:11px;color:var(--muted);">전체 또는 특정 팀 단위로 필터링</p>
+    </div>
+    <div class="card" style="padding:12px 14px;">
+      <div class="card-title" style="font-size:11px;">🏢 대리점 선택</div>
+      <p style="font-size:11px;color:var(--muted);">팀 내 특정 대리점 선택</p>
+    </div>
+    <div class="card" style="padding:12px 14px;">
+      <div class="card-title" style="font-size:11px;">🏪 매장 검색</div>
+      <p style="font-size:11px;color:var(--muted);">매장명 키워드로 직접 검색</p>
+    </div>
+    <div class="card" style="padding:12px 14px;">
+      <div class="card-title" style="font-size:11px;">🎖 등급 필터</div>
+      <p style="font-size:11px;color:var(--muted);">S/A/B/C/D 등급별 조회</p>
+      <div class="grade-row">
+        <div class="grade-b g-s">S</div>
+        <div class="grade-b g-a">A</div>
+        <div class="grade-b g-b">B</div>
+        <div class="grade-b g-c">C</div>
+        <div class="grade-b g-d">D</div>
+      </div>
+    </div>
+  </div>
+  <div class="tip-box" style="margin-bottom:24px;">
+    <strong>💡 Tip:</strong> 모든 필터는 <strong>동시에 복합 적용</strong>됩니다. 예) 3팀 > 특정 대리점 > B등급 매장만 조회 가능합니다.
+  </div>
+
+  <div class="section-title">📌 탭 구성 개요</div>
+  <div class="tab-row">
+    <div class="tab-pill" style="background:#eef2ff;border-color:#4361ee;color:#4361ee;">📊 팀별</div>
+    <div class="tab-pill" style="background:#f0fff4;border-color:#00b894;color:#007a62;">🏢 대리점별</div>
+    <div class="tab-pill" style="background:#fff5f7;border-color:#e84393;color:#c0176e;">🏪 매장별</div>
+    <div class="tab-pill" style="background:#fffbeb;border-color:#f59e0b;color:#b45309;">📋 상세리스트</div>
+    <div class="tab-pill" style="background:#faf5ff;border-color:#7c3aed;color:#7c3aed;">📢 공지사항</div>
+    <div class="tab-pill" style="background:#fff5f5;border-color:#e74c3c;color:#c0392b;">📈 활용현황 <span class="tag tag-admin" style="margin-left:4px;">ADMIN</span></div>
+  </div>
+
+  <div class="section-title">📊 ③ 탭별 주요 기능</div>
+  <div class="grid-2">
+
+    <div class="card">
+      <div class="card-title">
+        <div class="tab-icon" style="background:#eef2ff;">📊</div>
+        탭 1. 팀별 현황
+      </div>
+      <ul class="feat-list">
+        <li><strong>팀별 등급 분포 차트</strong> — 각 팀의 S~D 등급 구성 비율을 막대그래프로 시각화</li>
+        <li><strong>등급 하락 TOP 5 매장</strong> — 전월 대비 등급이 실제로 하락한 매장 중 점수 낙폭 상위 5개<span class="chip">핵심</span></li>
+        <li><strong>경계선 매장 분석</strong> — 다음 등급까지 근접한 매장 목록 (승급 유망 / 강등 위험)</li>
+        <li><strong>팀 취약 항목</strong> — 팀별로 평균 점수가 낮은 평가 항목 자동 파악</li>
+        <li>등급 현황 수치 (S/A/B/C/D 각 개수) 표 제공</li>
+      </ul>
+      <div class="tip-box">
+        <strong>⚠️ 등급 하락 기준:</strong> 점수만 낮아진 경우는 포함되지 않습니다. <strong>등급이 실제로 하락</strong>(예: A→B)한 매장만 표시됩니다.
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">
+        <div class="tab-icon" style="background:#f0fff4;">🏢</div>
+        탭 2. 대리점별 현황
+      </div>
+      <ul class="feat-list">
+        <li><strong>대리점 목록 테이블</strong> — 팀명, 대리점명, 매장수, 등급, 수수료 요약</li>
+        <li><strong>대리점명 클릭</strong> → <strong style="color:var(--accent)">💰 VD수수료 계산기</strong> 팝업 실행<span class="chip">NEW</span></li>
+        <li><strong>매장보기 버튼</strong> — 해당 대리점의 매장 목록 상세 표시</li>
+        <li><strong>분석결과 버튼</strong> — AI 분석 결과 및 개선 제안 표시</li>
+        <li>수수료 합계 기준 정렬 및 등급별 색상 구분</li>
+      </ul>
+      <div class="highlight-box" style="margin-top:10px;margin-bottom:0;">
+        <div class="hb-title">💰 VD수수료 계산기 사용법</div>
+        <p>대리점명을 클릭하면 해당 대리점 전체 매장의 <strong>수수료 시뮬레이션</strong>이 열립니다.<br>
+        각 매장별로 미달성 항목을 클릭하면 달성 여부를 토글하고, 등급·수수료 변화를 <strong>실시간 예측</strong>할 수 있습니다.<br>
+        Before / After 비교로 수수료 증감 효과를 즉시 확인하세요.</p>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">
+        <div class="tab-icon" style="background:#fff5f7;">🏪</div>
+        탭 3. 매장별 현황
+      </div>
+      <ul class="feat-list">
+        <li><strong>등급별 서브탭</strong> — S / A / B / C / D 탭으로 구분하여 탐색</li>
+        <li>매장별 총점, 항목별 세부점수, 등급, 소속 대리점 표시</li>
+        <li><strong>경계선 매장</strong> — 승급 근접 매장과 강등 위험 매장 별도 구분</li>
+        <li>항목별 달성·미달성 여부 색상 표시</li>
+        <li>필터(팀/대리점/등급)와 연동되어 조건에 맞는 매장만 표시</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <div class="card-title">
+        <div class="tab-icon" style="background:#fffbeb;">📋</div>
+        탭 4. 상세 리스트
+      </div>
+      <ul class="feat-list">
+        <li><strong>전체 매장 데이터 테이블</strong> — 모든 평가 항목 점수 포함</li>
+        <li><strong>Excel 다운로드</strong> — 현재 필터 조건 그대로 엑셀 파일 저장</li>
+        <li><strong>PDF 다운로드</strong> — 인쇄용 PDF 파일 생성</li>
+        <li>컬럼 정렬 기능으로 원하는 기준 정렬</li>
+        <li>필터와 연동 — 필터 변경 시 테이블 즉시 반영</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <div class="card-title">
+        <div class="tab-icon" style="background:#faf5ff;">📢</div>
+        탭 5. 공지사항
+      </div>
+      <ul class="feat-list">
+        <li>관리자가 등록한 <strong>공지·안내사항</strong> 목록 표시</li>
+        <li><strong>공지 등록</strong> <span class="tag tag-admin">ADMIN</span> — 제목 + 내용 입력 후 저장</li>
+        <li><strong>공지 삭제</strong> <span class="tag tag-admin">ADMIN</span> — 개별 공지 삭제</li>
+        <li>Firebase 연동 시 등록 즉시 모든 사용자에게 실시간 노출<span class="tag tag-sync">SYNC</span></li>
+        <li>최신순 정렬, 등록 일시 표시</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <div class="card-title">
+        <div class="tab-icon" style="background:#fff5f5;">📈</div>
+        탭 6. 활용현황 <span class="tag tag-admin">ADMIN</span>
+      </div>
+      <ul class="feat-list">
+        <li><strong>관리자 전용 탭</strong> — 일반 사용자 접속 시 탭 비표시</li>
+        <li>일별·월별 조회수 추이 차트</li>
+        <li>접속 기기 유형 분포 (PC / 모바일)</li>
+        <li>최근 접속 기록 목록 (날짜, 시간)</li>
+        <li>Firebase에 조회 로그가 저장되어 누적 통계 유지<span class="tag tag-sync">SYNC</span></li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <div class="section-title">⚙️ ④ 관리자 패널 — 데이터 관리 및 설정</div>
+  <div class="grid-2">
+    <div class="admin-card">
+      <div class="card-title">🗂 데이터 업로드 프로세스</div>
+      <div class="step-row">
+        <div class="step">
+          <div class="step-num">1</div>
+          <strong>엑셀 파일 준비</strong>
+          <p>VD평가 결과 엑셀 파일 준비 (정해진 컬럼 형식)</p>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <strong>관리자 로그인</strong>
+          <p>관리자 비밀번호로 접속</p>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <strong>엑셀 업로드</strong>
+          <p>파일 선택 후 데이터 자동 파싱 및 미리보기</p>
+        </div>
+        <div class="step">
+          <div class="step-num">4</div>
+          <strong>Firebase 배포</strong>
+          <p>확인 후 배포 → 전체 사용자 실시간 반영</p>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">🔧 기타 관리 기능</div>
+      <ul class="feat-list">
+        <li><strong>사용자 비밀번호 변경</strong> — 일반 접속 비밀번호 변경</li>
+        <li><strong>관리자 비밀번호 변경</strong> — 관리자 접속 비밀번호 변경</li>
+        <li>비밀번호는 Firebase에 저장 → 모든 기기 동기화<span class="tag tag-sync">SYNC</span></li>
+        <li><strong>현재 데이터 확인</strong> — Firebase에 저장된 최신 데이터 조회</li>
+        <li>데이터 업로드 이력 및 최종 업데이트 시각 표시</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <div class="section-title">🔥 ⑤ Firebase 실시간 연동</div>
+  <div class="firebase-card">
+    <div class="card-title" style="color:#e67e22;">🔥 Firebase Firestore 연동 안내</div>
+    <div class="grid-2" style="margin-bottom:0;">
+      <div>
+        <ul class="feat-list">
+          <li><strong>실시간 데이터 동기화</strong> — 관리자가 데이터 업로드 시 접속 중인 모든 사용자에게 즉시 반영</li>
+          <li><strong>공지사항 실시간 공유</strong> — 등록 즉시 전체 사용자 화면에 노출</li>
+          <li><strong>비밀번호 클라우드 저장</strong> — URL이 달라도 동일 비밀번호 유지</li>
+          <li><strong>조회 로그 기록</strong> — 접속자 통계 자동 수집</li>
+        </ul>
+      </div>
+      <div>
+        <ul class="feat-list">
+          <li>Firebase 설정 완료 후 자동 연결 (재입력 불필요)</li>
+          <li>오프라인 상태에서도 <strong>마지막 캐시 데이터</strong>로 조회 가능</li>
+          <li>Firebase 프로젝트: <strong>seobu-vd</strong></li>
+          <li>Firestore 규칙: 읽기 허용 / 쓰기 인증 필요</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <div class="section-title">🚀 ⑥ 자주 사용하는 시나리오</div>
+  <div class="grid-3">
+    <div class="card">
+      <div class="card-title" style="color:#00b894;">📉 등급 하락 매장 파악</div>
+      <ul class="feat-list">
+        <li>📊 <strong>팀별 탭</strong> 이동</li>
+        <li>팀 필터로 담당 팀 선택</li>
+        <li>하단 <strong>"등급 하락 TOP5"</strong> 섹션 확인</li>
+        <li>점수 낙폭 순으로 정렬된 매장 파악</li>
+        <li>해당 매장 클릭 후 항목별 상세 분석</li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="card-title" style="color:#2e86de;">💰 수수료 개선 시뮬레이션</div>
+      <ul class="feat-list">
+        <li>🏢 <strong>대리점별 탭</strong> 이동</li>
+        <li>대리점명 <strong>클릭</strong> (파란 밑줄)</li>
+        <li>수수료 계산기 팝업 확인</li>
+        <li>미달성 항목 클릭 후 달성으로 전환</li>
+        <li>수수료 증가 예상액 <strong>Before/After 비교</strong></li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="card-title" style="color:#e74c3c;">🆙 승급 가능 매장 찾기</div>
+      <ul class="feat-list">
+        <li>🏪 <strong>매장별 탭</strong> 이동</li>
+        <li>등급 서브탭에서 현재 등급 선택</li>
+        <li>하단 <strong>"경계선 매장"</strong> 섹션 확인</li>
+        <li>승급까지 필요한 점수 확인</li>
+        <li>📋 상세리스트로 이동 후 Excel 저장</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="highlight-box">
+    <div class="hb-title">🔑 핵심 포인트 요약</div>
+    <p>
+      <strong>① 로그인</strong> → 사용자(0000) 또는 관리자 비밀번호 입력 →
+      <strong>② 필터</strong> → 팀·대리점·등급 선택 →
+      <strong>③ 탭 탐색</strong> → 팀별(등급분포·하락매장) / 대리점별(수수료계산기) / 매장별(경계선) →
+      <strong>④ 내보내기</strong> → 상세리스트 탭에서 Excel/PDF 다운로드<br><br>
+      🔥 <strong>Firebase 연동 완료 시</strong>: 데이터 업로드·공지사항·비밀번호·조회통계가 모두 실시간으로 동기화됩니다.
+    </p>
+  </div>
+
+</div>
+
+<div class="manual-footer">
+  <strong>서부본부 VD평가 현황 대시보드</strong> — 활용 매뉴얼 &nbsp;|&nbsp;
+  GitHub Pages 배포 버전 &nbsp;|&nbsp;
+  Firebase Firestore 실시간 연동 &nbsp;|&nbsp;
+  문의: 관리자 계정으로 공지사항 등록
+</div>
+
+</body>
+</html>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         
