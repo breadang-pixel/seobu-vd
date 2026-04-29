@@ -1863,7 +1863,6 @@ async function postNotice() {
   const noticeId = Date.now();
   const notice = {id: noticeId, title, body, date: new Date().toISOString().slice(0,10), files: [], image: null};
 
-  document.getElementById('loadingOverlay').classList.remove('hidden');
   try {
     // 이미지 처리 (base64)
     const imgInput = document.getElementById('noticeImage');
@@ -1871,42 +1870,26 @@ async function postNotice() {
       notice.image = await readFileAsDataURL(imgInput.files[0]);
     }
 
-    // 첨부파일 처리: Firebase Storage 업로드 → 다운로드 URL 저장
+    // 첨부파일: base64로 읽어 Firestore에 직접 저장 (Firebase Storage 미사용)
     const fileInput = document.getElementById('noticeFile');
     if (fileInput.files.length) {
-      if (db && firebase.apps.length) {
-        try {
-          const storage = firebase.storage();
-          const uploadPromises = [...fileInput.files].map(async f => {
-            const ref = storage.ref('notices/' + noticeId + '/' + f.name);
-            await ref.put(f);
-            const url = await ref.getDownloadURL();
-            return {name: f.name, url: url};
-          });
-          notice.files = await Promise.all(uploadPromises);
-        } catch(storageErr) {
-          console.warn('Storage 업로드 실패, base64 폴백:', storageErr);
-          // Storage 실패 시 base64 폴백 (소용량만)
-          const readPromises = [...fileInput.files].map(f =>
-            readFileAsDataURL(f).then(url => ({name: f.name, url}))
-          );
-          notice.files = await Promise.all(readPromises);
-        }
-      } else {
-        // Firebase 미연결 시 base64 (로컬 전용)
-        const readPromises = [...fileInput.files].map(f =>
-          readFileAsDataURL(f).then(url => ({name: f.name, url}))
-        );
-        notice.files = await Promise.all(readPromises);
+      const MAX_FILE_MB = 5;
+      const tooBig = [...fileInput.files].find(f => f.size > MAX_FILE_MB * 1024 * 1024);
+      if (tooBig) {
+        alert('첨부파일은 파일 당 최대 ' + MAX_FILE_MB + 'MB까지 가능합니다.
+(' + tooBig.name + ')');
+        return;
       }
+      const readPromises = [...fileInput.files].map(f =>
+        readFileAsDataURL(f).then(url => ({name: f.name, url}))
+      );
+      notice.files = await Promise.all(readPromises);
     }
 
     await finishPost(notice);
   } catch(e) {
     console.error('공지 등록 오류:', e);
     alert('공지사항 등록 중 오류가 발생했습니다: ' + e.message);
-  } finally {
-    document.getElementById('loadingOverlay').classList.add('hidden');
   }
 }
 
