@@ -954,25 +954,45 @@ function parseWorkbook(wb) {
   const ws = wb.Sheets[wsName];
   const range = XLSX.utils.decode_range(ws['!ref']);
 
-  // Column mapping from row 8
+  // Read row 8 column headers (r=7 in 0-based XLSX.js indexing)
   const headers = [];
-  for (let c=range.s.c; c<=range.e.c; c++) {
-    const cell = ws[XLSX.utils.encode_cell({r:7,c:c})];
+  for (let c = range.s.c; c <= range.e.c; c++) {
+    const cell = ws[XLSX.utils.encode_cell({r:7, c:c})];
     headers[c] = cell ? String(cell.v||'').trim() : '';
   }
-
-  // Max scores from row 6
-  const maxScores = {};
-  const scoreMapping = {37:'NPS종합', 41:'비판매성NPS', 43:'방문평가', 47:'교육_필수', 51:'유선레벨보유', 55:'기획과정이수', 56:'우수사례', 60:'IMC', 64:'서부기지개', 65:'팀정성평가', 69:'단골관리', 73:'추천유치율', 77:'T화면공유'};
-  const maxScoreVals = {37:30, 41:10, 43:20, 47:10, 51:2, 55:1.5, 56:0.5, 60:1, 64:1, 65:4, 69:8, 73:1, 77:1};
+  // Find column index by header name; occ=0 for first match, 1 for second
+  const findCol = (name, occ) => {
+    let n = occ||0;
+    for (let c = 0; c < headers.length; c++) {
+      if (headers[c] === name) { if (n===0) return c; n--; }
+    }
+    return -1;
+  };
+  // Quarterly score columns — located by exact row-8 header text
+  const cNPS       = findCol('NPS', 0);          // AK(36)
+  const cNPS비판매  = findCol('NPS', 1);          // AO(40)
+  const cVisit     = findCol('방문평가');          // AQ(42)
+  const cEdu       = findCol('교육_필수');         // AU(46)
+  const cWireless  = findCol('유선레벨 보유');     // AY(50)
+  const cPlan      = findCol('기획과정 이수');     // BC(54)
+  const cBest      = findCol('우수사례');          // BD(55)
+  const cIMC       = findCol('IMC');              // BH(59)
+  const cGigaegae  = findCol('서부기지개');        // BL(63)
+  const cTeam      = findCol('팀정성평가');        // BM(64)
+  const cRegular   = findCol('단골관리');          // BQ(68)
+  const cRecommend = findCol('추천대비 유치율');   // BU(72)
+  const cScreen    = findCol('T화면공유');         // BY(76)
+  const cCustInfo  = findCol('고객정보');          // BZ(77)
+  const cVOC       = findCol('대외기관VOC');       // CA(78)
+  // Monthly cols: quarterly col Q has months at Q-3, Q-2, Q-1
 
   // Get base date
-  const dateCell = ws[XLSX.utils.encode_cell({r:1,c:7})];
+  const dateCell = ws[XLSX.utils.encode_cell({r:1, c:7})];
   STATE.baseDate = dateCell ? formatDateVal(dateCell.v) : '';
 
   const stores = [];
   for (let r=8; r<=range.e.r; r++) {
-    const getVal = (c)=> { const cell=ws[XLSX.utils.encode_cell({r:r,c:c})]; return cell?cell.v:null; };
+    const getVal = (c)=> { if(c<0) return null; const cell=ws[XLSX.utils.encode_cell({r:r,c:c})]; return cell?cell.v:null; };
     const storeName = getVal(7);
     if (!storeName) continue;
 
@@ -990,26 +1010,26 @@ function parseWorkbook(wb) {
       gradeGap: toNum(getVal(25)), gradeChangeDir: getVal(26)||'',
       evalTarget: [toNum(getVal(27)), toNum(getVal(28)), toNum(getVal(29))],
       workload: toNum(getVal(32)),
-      // Score items (using column index from row 6)
-      nps: toNum(getVal(36)), nps비판매: toNum(getVal(40)),
-      visit: toNum(getVal(42)), education: toNum(getVal(46)),
-      wirelessLevel: toNum(getVal(50)), planCourse: toNum(getVal(54)),
-      bestPractice: toNum(getVal(55)), imc: toNum(getVal(59)),
-      gigaegae: toNum(getVal(63)), teamEval: toNum(getVal(64)),
-      regularCustomer: toNum(getVal(68)), recommendRate: toNum(getVal(72)),
-      screenShare: toNum(getVal(76)),
-      customerInfo: toNum(getVal(77)), voc: toNum(getVal(78)),
-      // Monthly details
-      npsMonthly: [toNum(getVal(33)),toNum(getVal(34)),toNum(getVal(35))],
-      nps비판매Monthly: [toNum(getVal(37)),toNum(getVal(38)),toNum(getVal(39))],
-      eduMonthly: [toNum(getVal(43)),toNum(getVal(44)),toNum(getVal(45))],
-      wirelessMonthly: [toNum(getVal(47)),toNum(getVal(48)),toNum(getVal(49))],
-      planMonthly: [toNum(getVal(51)),toNum(getVal(52)),toNum(getVal(53))],
-      imcMonthly: [toNum(getVal(56)),toNum(getVal(57)),toNum(getVal(58))],
-      gigaegaeMonthly: [toNum(getVal(60)),toNum(getVal(61)),toNum(getVal(62))],
-      regularMonthly: [toNum(getVal(65)),toNum(getVal(66)),toNum(getVal(67))],
-      recommendMonthly: [toNum(getVal(69)),toNum(getVal(70)),toNum(getVal(71))],
-      screenShareMonthly: [toNum(getVal(73)),toNum(getVal(74)),toNum(getVal(75))],
+      // Score items — columns found dynamically from row 8 header names
+      nps: toNum(getVal(cNPS)), nps비판매: toNum(getVal(cNPS비판매)),
+      visit: toNum(getVal(cVisit)), education: toNum(getVal(cEdu)),
+      wirelessLevel: toNum(getVal(cWireless)), planCourse: toNum(getVal(cPlan)),
+      bestPractice: toNum(getVal(cBest)), imc: toNum(getVal(cIMC)),
+      gigaegae: toNum(getVal(cGigaegae)), teamEval: toNum(getVal(cTeam)),
+      regularCustomer: toNum(getVal(cRegular)), recommendRate: toNum(getVal(cRecommend)),
+      screenShare: toNum(getVal(cScreen)),
+      customerInfo: toNum(getVal(cCustInfo)), voc: toNum(getVal(cVOC)),
+      // Monthly details: quarterly_col - 3, -2, -1
+      npsMonthly:         [toNum(getVal(cNPS-3)),       toNum(getVal(cNPS-2)),       toNum(getVal(cNPS-1))],
+      nps비판매Monthly:    [toNum(getVal(cNPS비판매-3)),  toNum(getVal(cNPS비판매-2)),  toNum(getVal(cNPS비판매-1))],
+      eduMonthly:         [toNum(getVal(cEdu-3)),       toNum(getVal(cEdu-2)),       toNum(getVal(cEdu-1))],
+      wirelessMonthly:    [toNum(getVal(cWireless-3)),  toNum(getVal(cWireless-2)),  toNum(getVal(cWireless-1))],
+      planMonthly:        [toNum(getVal(cPlan-3)),      toNum(getVal(cPlan-2)),      toNum(getVal(cPlan-1))],
+      imcMonthly:         [toNum(getVal(cIMC-3)),       toNum(getVal(cIMC-2)),       toNum(getVal(cIMC-1))],
+      gigaegaeMonthly:    [toNum(getVal(cGigaegae-3)),  toNum(getVal(cGigaegae-2)),  toNum(getVal(cGigaegae-1))],
+      regularMonthly:     [toNum(getVal(cRegular-3)),   toNum(getVal(cRegular-2)),   toNum(getVal(cRegular-1))],
+      recommendMonthly:   [toNum(getVal(cRecommend-3)), toNum(getVal(cRecommend-2)), toNum(getVal(cRecommend-1))],
+      screenShareMonthly: [toNum(getVal(cScreen-3)),    toNum(getVal(cScreen-2)),    toNum(getVal(cScreen-1))],
     };
     stores.push(store);
   }
