@@ -507,8 +507,10 @@ body { font-family:'Noto Sans KR',sans-serif; background:var(--bg); color:var(--
           <div style="margin-bottom:12px;background:#fff;border:1px solid #fde68a;border-radius:8px;padding:10px;">
             <label style="font-size:12px;font-weight:700;display:block;margin-bottom:4px;color:#e65100;">🔥 Firebase 연동 설정 (최초 1회)</label>
             <textarea id="firebaseConfigInput" placeholder='Firebase 콘솔 → 프로젝트 설정 → 내 앱 에서 복사한 config 붙여넣기&#10;&#10;const firebaseConfig = {&#10;  apiKey: "...",&#10;  authDomain: "...",&#10;  projectId: "...",&#10;  ...&#10;};' style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-size:10px;height:115px;font-family:monospace;resize:vertical;"></textarea>
-            <button onclick="saveFirebaseConfigUI()" style="margin-top:4px;padding:7px 12px;background:#e65100;color:#fff;border:none;border-radius:6px;cursor:pointer;width:100%;font-size:12px;font-family:inherit;font-weight:700;">🔥 Firebase 연결하기</button>
+            <button onclick="saveFirebaseConfigUI()" style="width:100%;margin-top:4px;padding:7px 12px;background:#e65100;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:12px;font-family:inherit;font-weight:700;">🔥 Firebase 연결하기</button>
             <p id="firebaseStatus" style="font-size:10px;color:var(--text-secondary);margin-top:4px;text-align:center;"></p>
+            <button id="downloadHtmlBtn" onclick="downloadConfigEmbeddedHtml()" style="display:none;width:100%;margin-top:6px;padding:8px 12px;background:#0ea5e9;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:12px;font-family:inherit;font-weight:700;">📥 설정 포함 index.html 다운로드 (GitHub 업로드용)</button>
+            <p id="downloadHtmlGuide" style="display:none;font-size:10px;color:#0369a1;margin-top:4px;text-align:center;line-height:1.5;">⬆ 이 파일을 GitHub에 업로드하면 모든 사용자가 자동 연결됩니다</p>
           </div>
           <div style="margin-bottom:8px;">
             <label style="font-size:11px;font-weight:600;display:block;margin-bottom:3px;">사용자 비밀번호</label>
@@ -535,9 +537,35 @@ body { font-family:'Noto Sans KR',sans-serif; background:var(--bg); color:var(--
 
 <script>
 // ===== FIREBASE CONFIG =====
+// ★ Firebase config 내장값 (관리자가 "설정 포함 HTML 다운로드" 후 GitHub 업로드 시 자동 적용)
+const EMBEDDED_FIREBASE_CONFIG = null; // __REPLACE_CONFIG__
+
 let db = null;
 
+// URL 해시(#setup=BASE64)로 Firebase config 자동 부트스트랩
+function bootstrapFromHash() {
+  const hash = location.hash;
+  const match = hash.match(/#(?:setup|fb)=([A-Za-z0-9+/=]+)/);
+  if (!match) return false;
+  try {
+    const config = JSON.parse(atob(match[1]));
+    if (config && config.apiKey && config.projectId) {
+      localStorage.setItem('vd_firebase_config', JSON.stringify(config));
+      history.replaceState(null, '', location.pathname + location.search);
+      console.log('Firebase config 공유 링크로 자동 적용:', config.projectId);
+      return true;
+    }
+  } catch(e) {}
+  return false;
+}
+bootstrapFromHash(); // 페이지 로드 즉시 실행
+
 function getFirebaseConfig() {
+  // 1순위: HTML에 내장된 config (GitHub에 올라간 버전)
+  if (EMBEDDED_FIREBASE_CONFIG && EMBEDDED_FIREBASE_CONFIG.apiKey) {
+    return EMBEDDED_FIREBASE_CONFIG;
+  }
+  // 2순위: localStorage에 저장된 config (관리자 기기 or 공유 링크로 받은 경우)
   try {
     const saved = localStorage.getItem('vd_firebase_config');
     return saved ? JSON.parse(saved) : null;
@@ -547,6 +575,74 @@ function getFirebaseConfig() {
 function hasFirebaseConfig() {
   const cfg = getFirebaseConfig();
   return !!(cfg && cfg.apiKey && cfg.projectId);
+}
+
+// ★ 관리자: Firebase config가 내장된 index.html 다운로드 (GitHub 업로드용 - 1회 설정)
+function downloadConfigEmbeddedHtml() {
+  const config = getFirebaseConfig();
+  if (!config || !config.apiKey) {
+    alert('먼저 Firebase 연결하기를 완료하세요.');
+    return;
+  }
+  // 현재 HTML 소스를 fetch해서 플레이스홀더를 실제 config로 교체
+  fetch(location.href)
+    .then(r => r.text())
+    .then(html => {
+      const configJson = JSON.stringify(config);
+      // 플레이스홀더 교체
+      const updated = html.replace(
+        /const EMBEDDED_FIREBASE_CONFIG = null; \/\/ __REPLACE_CONFIG__/,
+        'const EMBEDDED_FIREBASE_CONFIG = ' + configJson + '; // __REPLACE_CONFIG__'
+      );
+      if (updated === html) {
+        alert('❌ 플레이스홀더를 찾지 못했습니다.
+이미 config가 내장된 버전이거나 로컬 파일입니다.');
+        return;
+      }
+      const blob = new Blob([updated], { type: 'text/html;charset=utf-8' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'index.html';
+      a.click();
+      URL.revokeObjectURL(a.href);
+      alert('✅ index.html 다운로드 완료!\n\n이 파일을 GitHub 저장소에 업로드하면\n모든 사용자가 앞으로 자동으로 Firebase에 연결됩니다.\n(이후 매일 배포 버튼만 누르면 됩니다)');
+    })
+    .catch(() => {
+      // 로컬 파일인 경우 fetch 불가 → localStorage config로 대체 안내
+      alert('⚠️ 로컬 파일에서는 자동 생성이 불가합니다.\n\nGitHub Pages URL(https://...)로 접속 후 다시 시도해주세요.');
+    });
+}
+
+// 사용자: config 직접 입력해서 연결
+function applyUserConfig() {
+  const raw = (document.getElementById('userConfigInput') || {}).value || '';
+  if (!raw.trim()) { alert('설정 코드를 붙여넣어 주세요.'); return; }
+  try {
+    let jsonStr = raw.trim();
+    const objMatch = jsonStr.match(/=\s*(\{[\s\S]*?\})/);
+    if (objMatch) jsonStr = objMatch[1];
+    jsonStr = jsonStr.replace(/([{,]\s*)([a-zA-Z_][a-zA-Z0-9_]*)\s*:/g, '$1"$2":');
+    const config = JSON.parse(jsonStr);
+    if (!config.apiKey || !config.projectId) throw new Error('apiKey 또는 projectId가 없습니다.');
+    localStorage.setItem('vd_firebase_config', JSON.stringify(config));
+    if (initFirebase()) {
+      alert('✅ Firebase 연결 완료! 잠시 후 데이터를 불러옵니다.');
+      location.reload();
+    } else { throw new Error('Firebase 초기화 실패'); }
+  } catch(e) { alert('오류: ' + e.message); }
+}
+
+// 관리자: Firebase 설정 공유 링크 생성 후 클립보드 복사
+function copyFirebaseShareLink() {
+  const config = getFirebaseConfig();
+  if (!config || !config.apiKey) { alert('먼저 Firebase 설정을 저장하세요.'); return; }
+  const encoded = btoa(JSON.stringify(config));
+  const url = location.origin + location.pathname + '#setup=' + encoded;
+  navigator.clipboard.writeText(url).then(() => {
+    alert('✅ Firebase 공유 링크가 복사되었습니다!\n\n사용자들에게 이 링크를 한 번 공유하면,\n클릭 시 Firebase가 자동 연결됩니다.\n\n(이후 일반 URL로 접속해도 정상 동작합니다)');
+  }).catch(() => {
+    prompt('아래 링크를 복사하여 사용자에게 공유하세요:', url);
+  });
 }
 
 function initFirebase() {
@@ -674,7 +770,11 @@ function saveFirebaseConfigUI() {
     if (initFirebase()) {
       document.getElementById('firebaseStatus').textContent = '✅ Firebase 연결 성공! 프로젝트: ' + config.projectId;
       document.getElementById('firebaseStatus').style.color = '#059669';
-      alert('✅ Firebase 연결 성공!\n프로젝트: ' + config.projectId + '\n\n이제 엑셀을 업로드하고 "🚀 온라인 배포"를 클릭하세요!');
+      const dlBtn = document.getElementById('downloadHtmlBtn');
+      const dlGuide = document.getElementById('downloadHtmlGuide');
+      if (dlBtn) dlBtn.style.display = '';
+      if (dlGuide) dlGuide.style.display = '';
+      alert('✅ Firebase 연결 성공!\n프로젝트: ' + config.projectId + '\n\n아래 "📥 설정 포함 index.html 다운로드" 버튼을 눌러\nGitHub에 업로드하면 모든 사용자가 자동 연결됩니다.\n(이 작업은 최초 1회만 하면 됩니다)');
     } else {
       throw new Error('Firebase 초기화에 실패했습니다.');
     }
@@ -696,6 +796,10 @@ function loadFirebaseConfigToUI() {
     if (db) {
       status.textContent = '✅ Firebase 연결됨: ' + (config?.projectId || '');
       status.style.color = '#059669';
+      const dlBtn = document.getElementById('downloadHtmlBtn');
+      const dlGuide = document.getElementById('downloadHtmlGuide');
+      if (dlBtn) dlBtn.style.display = '';
+      if (dlGuide) dlGuide.style.display = '';
     } else {
       status.textContent = '⚠️ Firebase 미연결 - 아래 config를 붙여넣고 연결하세요';
       status.style.color = '#d97706';
@@ -720,7 +824,23 @@ async function initApp() {
     if (hasFB) {
       await loadFromFirebase();
     } else {
-      document.getElementById('contentArea').innerHTML='<div class="card"><p style="text-align:center;padding:40px;color:var(--text-secondary);">관리자가 아직 데이터를 배포하지 않았습니다.<br><br>관리자에게 문의하세요.</p></div>';
+      // config 없는 사용자: 공유 링크로 config 전달받았는지 재확인 후 재시도
+      const retried = bootstrapFromHash();
+      if (retried && hasFirebaseConfig()) {
+        if (initFirebase()) { await loadFromFirebase(); return; }
+      }
+      // 그래도 없으면 안내 UI 표시
+      document.getElementById('contentArea').innerHTML=`
+        <div class="card" style="max-width:480px;margin:60px auto;padding:32px 28px;text-align:center;">
+          <div style="font-size:36px;margin-bottom:12px;">🔗</div>
+          <h3 style="margin-bottom:8px;color:var(--text-primary)">Firebase 연결 필요</h3>
+          <p style="color:var(--text-secondary);font-size:13px;margin-bottom:20px;line-height:1.6;">
+            관리자로부터 <strong>Firebase 공유 링크</strong>를 받아 접속하거나,<br>아래에 설정 코드를 붙여넣어 연결하세요.
+          </p>
+          <textarea id="userConfigInput" placeholder="관리자에게 받은 Firebase config 코드를 붙여넣으세요..." style="width:100%;height:90px;padding:8px;border:1px solid var(--border);border-radius:8px;font-size:11px;font-family:monospace;resize:none;margin-bottom:10px;"></textarea>
+          <button onclick="applyUserConfig()" style="width:100%;padding:10px;background:var(--primary);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">🔥 연결하기</button>
+          <p style="margin-top:12px;font-size:11px;color:var(--text-secondary);">공유 링크를 받으셨다면 그 링크로 접속하면 자동 연결됩니다.</p>
+        </div>`;
     }
   }
   setupUpload();
@@ -747,6 +867,10 @@ async function loadFromFirebase() {
         STATE.notices = data.notices || [];
         if (data.userPw) setPw('user', data.userPw);
         if (data.adminPw) setPw('admin', data.adminPw);
+        // 배포된 Firebase config가 있으면 자동 저장 (다른 기기 자동 연결용)
+        if (data.firebaseConfig && data.firebaseConfig.apiKey && !hasFirebaseConfig()) {
+          localStorage.setItem('vd_firebase_config', JSON.stringify(data.firebaseConfig));
+        }
         renderAll();
       } else {
         if (STATE.role !== 'admin') document.getElementById('contentArea').innerHTML='<div class="card"><p style="text-align:center;padding:40px;color:var(--text-secondary);">관리자가 아직 데이터를 배포하지 않았습니다.</p></div>';
@@ -773,11 +897,13 @@ async function publishToFirebase() {
   if (!confirm('현재 데이터를 Firebase에 배포합니다.\n모든 사용자가 즉시 새 데이터를 확인할 수 있습니다.\n\n계속하시겠습니까?')) return;
   try {
     document.getElementById('loadingOverlay').classList.remove('hidden');
+    const firebaseCfg = getFirebaseConfig();
     await db.collection('vd-dashboard').doc('main-data').set({
       rawData: STATE.rawData, agencyData: STATE.agencyData || [],
       baseDate: STATE.baseDate, notices: STATE.notices,
       userPw: getPw('user'), adminPw: getPw('admin'),
-      publishDate: new Date().toISOString()
+      publishDate: new Date().toISOString(),
+      firebaseConfig: firebaseCfg  // 사용자 자동 연결용 config 포함
     });
     document.getElementById('loadingOverlay').classList.add('hidden');
     alert('✅ Firebase 배포 완료!\n사용자들이 즉시 최신 데이터를 확인할 수 있습니다.');
