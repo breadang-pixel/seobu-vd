@@ -595,8 +595,7 @@ function downloadConfigEmbeddedHtml() {
         'const EMBEDDED_FIREBASE_CONFIG = ' + configJson + '; // __REPLACE_CONFIG__'
       );
       if (updated === html) {
-        alert('❌ 플레이스홀더를 찾지 못했습니다.
-이미 config가 내장된 버전이거나 로컬 파일입니다.');
+        alert('❌ 플레이스홀더를 찾지 못했습니다.\n이미 config가 내장된 버전이거나 로컬 파일입니다.');
         return;
       }
       const blob = new Blob([updated], { type: 'text/html;charset=utf-8' });
