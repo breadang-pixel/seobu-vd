@@ -17,6 +17,7 @@
 <!-- Firebase SDK -->
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-storage-compat.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -864,6 +865,13 @@ async function loadFromFirebase() {
         STATE.agencyData = data.agencyData || [];
         STATE.baseDate = data.baseDate || '';
         STATE.notices = data.notices || [];
+        // notices-data 문서에 최신 공지가 있으면 우선 사용
+        try {
+          const nd = await db.collection('vd-dashboard').doc('notices-data').get();
+          if (nd.exists && nd.data() && nd.data().notices && nd.data().notices.length) {
+            STATE.notices = nd.data().notices;
+          }
+        } catch(e) { /* notices-data 없으면 main-data의 notices 사용 */ }
         if (data.userPw) setPw('user', data.userPw);
         if (data.adminPw) setPw('admin', data.adminPw);
         // 배포된 Firebase config가 있으면 자동 저장 (다른 기기 자동 연결용)
@@ -1818,7 +1826,7 @@ function renderNoticeTab() {
     html += `<div class="notice-item"><h4>${n.title}</h4>
       <div class="notice-meta">${n.date} | 작성자: 관리자</div>
       <div class="notice-body">${n.body.replace(/\n/g,'<br>')}${n.image?'<br><img src="'+n.image+'" style="max-width:100%;margin-top:8px;border-radius:8px">':''}</div>
-      ${n.files&&n.files.length?'<div class="notice-files">첨부: '+n.files.map(f=>'<a href="'+f.url+'" download="'+f.name+'">📎 '+f.name+'</a>').join(' ')+'</div>':''}
+      ${n.files&&n.files.length?'<div class="notice-files">첨부: '+n.files.map(f=>'<a href="'+f.url+'" target="_blank" rel="noopener">📎 '+f.name+'</a>').join(' ')+'</div>':''}
       ${STATE.role==='admin'?'<button onclick="deleteNotice('+n.id+')" style="margin-top:8px;padding:4px 10px;border:1px solid var(--danger);border-radius:4px;background:#fff;color:var(--danger);cursor:pointer;font-size:11px;font-family:inherit;">삭제</button>':''}
     </div>`;
   });
@@ -1826,41 +1834,94 @@ function renderNoticeTab() {
   document.getElementById('tabNotice').innerHTML = html;
 }
 
-function postNotice() {
+// 파일을 DataURL로 읽는 Promise 헬퍼
+function readFileAsDataURL(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = e => resolve(e.target.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+// 공지사항을 Firestore notices-data 문서에 즉시 저장 (실시간 동기화)
+async function saveNoticesToFirestore() {
+  if (!db) return;
+  try {
+    await db.collection('vd-dashboard').doc('notices-data').set({
+      notices: STATE.notices,
+      updatedAt: new Date().toISOString()
+    });
+  } catch(e) { console.warn('공지 Firestore 저장 오류:', e); }
+}
+
+async function postNotice() {
   const title = document.getElementById('noticeTitle').value.trim();
   const body = document.getElementById('noticeBody').value.trim();
   if(!title || !body) { alert('제목과 내용을 입력해주세요.'); return; }
-  const notice = {id:Date.now(), title, body, date:new Date().toISOString().slice(0,10), files:[], image:null};
 
-  // Handle image
-  const imgInput = document.getElementById('noticeImage');
-  if(imgInput.files[0]) {
-    const reader = new FileReader();
-    reader.onload = e=>{ notice.image=e.target.result; finishPost(notice); };
-    reader.readAsDataURL(imgInput.files[0]);
-  } else finishPost(notice);
+  const noticeId = Date.now();
+  const notice = {id: noticeId, title, body, date: new Date().toISOString().slice(0,10), files: [], image: null};
 
-  // Handle files
-  const fileInput = document.getElementById('noticeFile');
-  if(fileInput.files.length) {
-    [...fileInput.files].forEach(f => {
-      const reader = new FileReader();
-      reader.onload = e=>notice.files.push({name:f.name, url:e.target.result});
-      reader.readAsDataURL(f);
-    });
+  document.getElementById('loadingOverlay').classList.remove('hidden');
+  try {
+    // 이미지 처리 (base64)
+    const imgInput = document.getElementById('noticeImage');
+    if (imgInput.files[0]) {
+      notice.image = await readFileAsDataURL(imgInput.files[0]);
+    }
+
+    // 첨부파일 처리: Firebase Storage 업로드 → 다운로드 URL 저장
+    const fileInput = document.getElementById('noticeFile');
+    if (fileInput.files.length) {
+      if (db && firebase.apps.length) {
+        try {
+          const storage = firebase.storage();
+          const uploadPromises = [...fileInput.files].map(async f => {
+            const ref = storage.ref('notices/' + noticeId + '/' + f.name);
+            await ref.put(f);
+            const url = await ref.getDownloadURL();
+            return {name: f.name, url: url};
+          });
+          notice.files = await Promise.all(uploadPromises);
+        } catch(storageErr) {
+          console.warn('Storage 업로드 실패, base64 폴백:', storageErr);
+          // Storage 실패 시 base64 폴백 (소용량만)
+          const readPromises = [...fileInput.files].map(f =>
+            readFileAsDataURL(f).then(url => ({name: f.name, url}))
+          );
+          notice.files = await Promise.all(readPromises);
+        }
+      } else {
+        // Firebase 미연결 시 base64 (로컬 전용)
+        const readPromises = [...fileInput.files].map(f =>
+          readFileAsDataURL(f).then(url => ({name: f.name, url}))
+        );
+        notice.files = await Promise.all(readPromises);
+      }
+    }
+
+    await finishPost(notice);
+  } catch(e) {
+    console.error('공지 등록 오류:', e);
+    alert('공지사항 등록 중 오류가 발생했습니다: ' + e.message);
+  } finally {
+    document.getElementById('loadingOverlay').classList.add('hidden');
   }
 }
 
-function finishPost(notice) {
+async function finishPost(notice) {
   STATE.notices.push(notice);
   saveToStorage('notices', STATE.notices);
+  await saveNoticesToFirestore();
   renderNoticeTab();
 }
 
-function deleteNotice(id) {
+async function deleteNotice(id) {
   if(!confirm('삭제하시겠습니까?')) return;
   STATE.notices = STATE.notices.filter(n=>n.id!==id);
   saveToStorage('notices', STATE.notices);
+  await saveNoticesToFirestore();
   renderNoticeTab();
 }
 
