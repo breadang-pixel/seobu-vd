@@ -17,7 +17,6 @@
 <!-- Firebase SDK -->
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-storage-compat.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -1812,10 +1811,6 @@ function renderNoticeTab() {
       <div class="notice-form">
         <input type="text" id="noticeTitle" placeholder="제목을 입력하세요">
         <textarea id="noticeBody" placeholder="내용을 입력하세요"></textarea>
-        <div style="margin:8px 0">
-          <label style="font-size:12px;cursor:pointer;color:var(--primary)">📎 첨부파일: <input type="file" id="noticeFile" multiple style="font-size:12px"></label>
-          <label style="font-size:12px;cursor:pointer;color:var(--primary);margin-left:12px">🖼️ 이미지: <input type="file" id="noticeImage" accept="image/*" style="font-size:12px"></label>
-        </div>
         <button onclick="postNotice()" style="padding:8px 20px;background:var(--primary);color:#fff;border:none;border-radius:6px;cursor:pointer;font-family:inherit;font-weight:600;">등록</button>
       </div></div>`;
   }
@@ -1825,23 +1820,12 @@ function renderNoticeTab() {
   STATE.notices.slice().reverse().forEach((n,i) => {
     html += `<div class="notice-item"><h4>${n.title}</h4>
       <div class="notice-meta">${n.date} | 작성자: 관리자</div>
-      <div class="notice-body">${n.body.replace(/\n/g,'<br>')}${n.image?'<br><img src="'+n.image+'" style="max-width:100%;margin-top:8px;border-radius:8px">':''}</div>
-      ${n.files&&n.files.length?'<div class="notice-files">첨부: '+n.files.map(f=>'<a href="'+f.url+'" target="_blank" rel="noopener">📎 '+f.name+'</a>').join(' ')+'</div>':''}
+      <div class="notice-body">${n.body.replace(/\n/g,'<br>')}</div>
       ${STATE.role==='admin'?'<button onclick="deleteNotice('+n.id+')" style="margin-top:8px;padding:4px 10px;border:1px solid var(--danger);border-radius:4px;background:#fff;color:var(--danger);cursor:pointer;font-size:11px;font-family:inherit;">삭제</button>':''}
     </div>`;
   });
   html += '</div>';
   document.getElementById('tabNotice').innerHTML = html;
-}
-
-// 파일을 DataURL로 읽는 Promise 헬퍼
-function readFileAsDataURL(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = e => resolve(e.target.result);
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
 }
 
 // 공지사항을 Firestore notices-data 문서에 즉시 저장 (실시간 동기화)
@@ -1859,38 +1843,8 @@ async function postNotice() {
   const title = document.getElementById('noticeTitle').value.trim();
   const body = document.getElementById('noticeBody').value.trim();
   if(!title || !body) { alert('제목과 내용을 입력해주세요.'); return; }
-
-  const noticeId = Date.now();
-  const notice = {id: noticeId, title, body, date: new Date().toISOString().slice(0,10), files: [], image: null};
-
-  try {
-    // 이미지 처리 (base64)
-    const imgInput = document.getElementById('noticeImage');
-    if (imgInput.files[0]) {
-      notice.image = await readFileAsDataURL(imgInput.files[0]);
-    }
-
-    // 첨부파일: base64로 읽어 Firestore에 직접 저장 (Firebase Storage 미사용)
-    const fileInput = document.getElementById('noticeFile');
-    if (fileInput.files.length) {
-      const MAX_FILE_MB = 5;
-      const tooBig = [...fileInput.files].find(f => f.size > MAX_FILE_MB * 1024 * 1024);
-      if (tooBig) {
-        alert('첨부파일은 파일 당 최대 ' + MAX_FILE_MB + 'MB까지 가능합니다.
-(' + tooBig.name + ')');
-        return;
-      }
-      const readPromises = [...fileInput.files].map(f =>
-        readFileAsDataURL(f).then(url => ({name: f.name, url}))
-      );
-      notice.files = await Promise.all(readPromises);
-    }
-
-    await finishPost(notice);
-  } catch(e) {
-    console.error('공지 등록 오류:', e);
-    alert('공지사항 등록 중 오류가 발생했습니다: ' + e.message);
-  }
+  const notice = {id: Date.now(), title, body, date: new Date().toISOString().slice(0,10)};
+  await finishPost(notice);
 }
 
 async function finishPost(notice) {
