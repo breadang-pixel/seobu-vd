@@ -1553,49 +1553,6 @@ function showAgencyStores(agencyName) {
 }
 
 
-// ===== 매장별 월별+분기별 상세 점수 팝업 =====
-function showStoreMonthlyDetail(storeCode) {
-  const st = STATE.rawData.find(d => d.storeCode === String(storeCode));
-  if (!st) return;
-  const months = ['4월','5월','6월'];
-  let html = `<button class="modal-close" onclick="closeModal()">✕</button>`;
-  html += `<h2 style="margin-bottom:4px">📋 ${st.storeName} 평가항목별 월별 점수</h2>`;
-  html += `<p style="color:var(--text-secondary);font-size:12px;margin-bottom:12px">${st.agencyName} | ${st.team} | ${st.manager} | 현등급: <strong>${st.currGrade}</strong> | 총점: <strong>${st.currScore.toFixed(1)}점</strong></p>`;
-  html += '<div style="overflow-x:auto"><table class="data-table">';
-  html += '<tr><th>평가항목</th><th>만점</th><th>4월</th><th>5월</th><th>6월</th><th style="background:var(--accent);color:#fff">분기점수</th><th>달성률</th></tr>';
-  const unevalKeys = getUnevaluatedKeys();
-  SCORE_ITEMS.forEach(item => {
-    const quarterly = st[item.key];
-    const pct = item.max > 0 ? (quarterly / item.max * 100) : 0;
-    const isUneval = unevalKeys.has(item.key);
-    let monthCells = '';
-    if (item.monthlyKey && st[item.monthlyKey]) {
-      st[item.monthlyKey].forEach(v => {
-        monthCells += `<td style="text-align:center">${v > 0 ? v.toFixed(2) : '-'}</td>`;
-      });
-    } else {
-      monthCells = '<td colspan="3" style="text-align:center;color:var(--text-secondary);font-size:11px">월별 집계 없음</td>';
-    }
-    const pctColor = isUneval ? 'var(--text-secondary)' : pct >= 80 ? 'var(--success)' : pct >= 50 ? 'var(--warning)' : 'var(--danger)';
-    html += `<tr${isUneval ? ' style="opacity:0.5"' : ''}>
-      <td style="font-weight:600">${item.label}${isUneval ? ' <span style="font-size:10px;color:var(--text-secondary)">(미평가)</span>' : ''}</td>
-      <td style="text-align:center">${item.max}</td>
-      ${monthCells}
-      <td style="text-align:center;font-weight:700;background:rgba(59,130,246,0.08)">${quarterly > 0 ? quarterly.toFixed(2) : isUneval ? '-' : '0'}</td>
-      <td style="text-align:center;color:${pctColor};font-weight:600">${isUneval ? '-' : pct.toFixed(0)+'%'}</td>
-    </tr>`;
-  });
-  // Total row
-  html += `<tr style="font-weight:700;background:rgba(59,130,246,0.12)">
-    <td>합계</td><td style="text-align:center">60</td>
-    <td colspan="3"></td>
-    <td style="text-align:center">${st.currScore.toFixed(1)}</td>
-    <td style="text-align:center">${(st.currScore/60*100).toFixed(0)}%</td>
-  </tr>`;
-  html += '</table></div>';
-  showModal(html);
-}
-
 function showAgencyAnalysis(agencyName) {
   const stores = STATE.rawData.filter(d=>d.agencyName===agencyName);
   const allAvg = {};
@@ -1629,15 +1586,6 @@ function showAgencyAnalysis(agencyName) {
       <td style="color:${vs?'var(--success)':'var(--danger)'}; font-weight:700">${vs?'양호':'부족'}</td></tr>`;
   });
   html += '</table>';
-
-  // Per-store monthly detail buttons
-  html += '<h3 style="margin:16px 0 8px;font-size:14px">🏪 매장별 월별 상세점수</h3>';
-  html += '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px">';
-  stores.forEach(st => {
-    html += `<button onclick="showStoreMonthlyDetail('${st.storeCode}')" style="padding:4px 10px;border:1px solid var(--accent);border-radius:6px;background:#fff;cursor:pointer;font-size:12px;color:var(--accent);font-family:inherit">${st.storeName}</button>`;
-  });
-  html += '</div>';
-
   showModal(html);
 }
 
@@ -1673,7 +1621,7 @@ function switchStoreGrade(grade) {
     const weak = findWeakItemsSingle(st).slice(0,3);
     html += `<tr>
       <td>${i+1}</td>
-      <td style="font-weight:600;text-align:left;cursor:pointer;color:var(--accent)" onclick="showStoreMonthlyDetail('${st.storeCode}')" title="클릭: 월별 상세">${st.storeName}</td>
+      <td style="font-weight:600;text-align:left">${st.storeName}</td>
       <td>${st.team}</td><td>${st.agencyName}</td>
       <td><span class="grade-badge ${st.prevGrade}">${st.prevGrade}</span></td>
       <td><span class="grade-badge ${st.currGrade}">${st.currGrade}</span></td>
@@ -1724,19 +1672,18 @@ function renderRawListTab() {
   let html = `<div class="card"><div class="card-header"><h3>📋 상세 리스트 (${data.length}건)</h3>
     <div><button class="pdf-btn" onclick="exportExcel()" style="background:var(--success);margin-right:8px">📥 엑셀 다운로드</button>
     <button class="pdf-btn" onclick="downloadPDF('tabRawlist')">📄 PDF 다운로드</button></div></div>`;
-  html += '<div style="overflow-x:auto"><table class="data-table"><tr><th>순위</th><th>팀</th><th>대리점</th><th>매장명</th><th>담당</th><th>전등급</th><th>현등급</th><th>총점</th><th>순위율</th><th>예상수수료</th><th>수수료증감</th><th>월별상세</th>';
-  SCORE_ITEMS.forEach(item=> html+=`<th>${item.label}<br><span style="font-size:10px;font-weight:400">(/${item.max})</span></th>`);
+  html += '<div style="overflow-x:auto"><table class="data-table"><tr><th>순위</th><th>팀</th><th>대리점</th><th>매장명</th><th>담당</th><th>전등급</th><th>현등급</th><th>총점</th><th>순위율</th><th>예상수수료</th><th>수수료증감</th>';
+  SCORE_ITEMS.forEach(item=> html+=`<th>${item.label}<br><span style="font-weight:400;font-size:10px">(만점:${item.max})</span></th>`);
   html += '</tr>';
 
   pageData.forEach(st => {
     html += `<tr><td>${st.currRank}</td><td>${st.team}</td><td>${st.agencyName}</td>
-      <td style="font-weight:600;text-align:left;cursor:pointer;color:var(--accent)" onclick="showStoreMonthlyDetail('${st.storeCode}')" title="클릭: 월별 상세">${st.storeName}</td><td>${st.manager}</td>
+      <td style="font-weight:600;text-align:left">${st.storeName}</td><td>${st.manager}</td>
       <td><span class="grade-badge ${st.prevGrade}">${st.prevGrade}</span></td>
       <td><span class="grade-badge ${st.currGrade}">${st.currGrade}</span></td>
       <td>${st.currScore.toFixed(1)}</td><td>${(st.rankRate*100).toFixed(1)}%</td>
       <td>${formatMoney(st.expectedFee)}</td>
-      <td><span class="change-badge ${st.feeChange>=0?'up':'down'}">${st.feeChange>=0?'+':''}${formatMoney(st.feeChange)}</span></td>
-      <td><button onclick="showStoreMonthlyDetail('${st.storeCode}')" style="padding:2px 7px;border:1px solid var(--accent);border-radius:4px;background:#fff;cursor:pointer;font-size:11px;color:var(--accent);font-family:inherit">월별</button></td>`;
+      <td><span class="change-badge ${st.feeChange>=0?'up':'down'}">${st.feeChange>=0?'+':''}${formatMoney(st.feeChange)}</span></td>`;
     SCORE_ITEMS.forEach(item => {
       const pct = item.max>0?(st[item.key]/item.max*100):100;
       html += `<td style="color:${pct>=80?'var(--success)':pct>=50?'var(--warning)':'var(--danger)'}">${st[item.key].toFixed(1)}</td>`;
